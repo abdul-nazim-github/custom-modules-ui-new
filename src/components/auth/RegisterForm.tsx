@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, RefreshCw, Check } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -12,6 +14,7 @@ const SPECIAL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
 
 const RegisterForm = () => {
     const dispatch = useAppDispatch();
+    const router = useRouter();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -25,7 +28,6 @@ const RegisterForm = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const [isLoading, setIsLoading] = useState(false);
-    const [submitSuccess, setSubmitSuccess] = useState(false);
 
 
 
@@ -147,7 +149,9 @@ const RegisterForm = () => {
                 email: formData.email.trim(),
                 password: formData.password,
             });
-            setSubmitSuccess(true);
+
+            dispatch(showToast({ message: 'User registered successfully! Please log in.', type: 'success' }));
+
             setFormData({
                 firstName: '',
                 lastName: '',
@@ -155,6 +159,8 @@ const RegisterForm = () => {
                 password: '',
                 confirmPassword: '',
             });
+
+            router.push('/login');
         } catch (err) {
             const error = err as AxiosError<{ message: string }>;
             console.error('Registration failed:', error);
@@ -181,21 +187,6 @@ const RegisterForm = () => {
         },
     ];
 
-    if (submitSuccess) {
-        return (
-            <div className="text-center p-8 bg-green-50 rounded-lg border border-green-200">
-                <Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-green-800 mb-2">User registered successfully!</h3>
-                <p className="text-green-700">You can now log in with your credentials.</p>
-                <button
-                    onClick={() => setSubmitSuccess(false)}
-                    className="mt-6 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-                >
-                    Register Another Account
-                </button>
-            </div>
-        );
-    }
 
     return (
         <form onSubmit={handleSubmit} noValidate className="w-full max-w-lg mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
@@ -344,6 +335,17 @@ const RegisterForm = () => {
                     'Create Account'
                 )}
             </button>
+            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Already have an account?{' '}
+                    <Link
+                        href="/login"
+                        className="text-blue-600 hover:text-blue-700 font-bold transition-colors duration-200 cursor-pointer"
+                    >
+                        Sign In
+                    </Link>
+                </p>
+            </div>
         </form>
     );
 };

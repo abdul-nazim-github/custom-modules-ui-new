@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAppDispatch } from '@/lib/hooks';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { setCredentials } from '@/lib/features/auth/authSlice';
@@ -125,7 +126,7 @@ export default function LoginForm() {
             </div>
             <div className="flex items-center justify-between mt-4">
                 <button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-[0.98]"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-[0.98] cursor-pointer"
                     type="submit"
                     disabled={isLoading}
                 >
@@ -139,6 +140,17 @@ export default function LoginForm() {
                         </span>
                     ) : 'Sign In'}
                 </button>
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Don't have an account?{' '}
+                    <Link
+                        href="/register"
+                        className="text-blue-600 hover:text-blue-700 font-bold transition-colors duration-200 cursor-pointer"
+                    >
+                        Register
+                    </Link>
+                </p>
             </div>
         </form>
     );

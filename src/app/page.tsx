@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { logout } from '@/lib/features/auth/authSlice';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { useRouter } from 'next/navigation';
+import LoginForm from '@/components/auth/LoginForm';
 
 export default function Home() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
@@ -35,16 +36,11 @@ export default function Home() {
 
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
           {!isAuthenticated ? (
-            <div className="flex flex-col gap-6 items-center">
+            <div className="flex flex-col gap-6 items-center w-full max-w-md mx-auto">
               <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
                 Please sign in to access your modules and settings.
               </p>
-              <Link
-                href="/login"
-                className="inline-block px-10 py-4 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                Sign In
-              </Link>
+              <LoginForm />
             </div>
           ) : (
             <div className="flex flex-col gap-6 items-center">
