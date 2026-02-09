@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import counterReducer from './features/counter/counterSlice'
+import toastReducer from './features/toast/toastSlice'
 import { pokemonApi } from './services/pokemon'
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       counter: counterReducer,
+      toast: toastReducer,
       [pokemonApi.reducerPath]: pokemonApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
