@@ -116,9 +116,15 @@ export default function ForgotPasswordPage() {
                         </button>
                     </form>
 
-                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-sm">
-                        <Link href="/" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
-                            Back to Home
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-sm flex flex-col gap-3 items-center">
+                        <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+                            Back to Login
+                        </Link>
+                        <Link
+                            href="/contact"
+                            className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 font-medium transition-colors"
+                        >
+                            Need help? Contact Support
                         </Link>
                     </div>
                 </div>

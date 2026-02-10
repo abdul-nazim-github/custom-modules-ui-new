@@ -162,6 +162,14 @@ export default function LoginForm() {
                         Register
                     </Link>
                 </p>
+                <div className="mt-4">
+                    <Link
+                        href="/contact"
+                        className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm font-medium transition-colors duration-200 cursor-pointer"
+                    >
+                        Need help? Contact Support
+                    </Link>
+                </div>
             </div>
         </form>
     );
