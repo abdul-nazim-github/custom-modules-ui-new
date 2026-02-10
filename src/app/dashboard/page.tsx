@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { logout } from '@/lib/features/auth/authSlice';
@@ -11,10 +11,7 @@ export default function Dashboard() {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-    const [isMounted, setIsMounted] = useState(false);
-
     useEffect(() => {
-        setIsMounted(true);
         if (!isAuthenticated) {
             router.push('/login');
         }
@@ -35,7 +32,7 @@ export default function Dashboard() {
         }
     };
 
-    if (!isMounted || !isAuthenticated) {
+    if (!isAuthenticated) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
