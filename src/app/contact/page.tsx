@@ -139,7 +139,7 @@ export default function ContactPage() {
                     Drop us your query
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                    We'd love to hear from you. We usually respond within 24 hours.
+                    We&apos;d love to hear from you. We usually respond within 24 hours.
                 </p>
             </div>
 
