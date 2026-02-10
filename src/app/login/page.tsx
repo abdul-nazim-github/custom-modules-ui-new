@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { setCredentials, logout } from '@/lib/features/auth/authSlice';
+import { setCredentials } from '@/lib/features/auth/authSlice';
 import LoginForm from '@/components/auth/LoginForm';
 
 export default function LoginPage() {
@@ -13,34 +13,33 @@ export default function LoginPage() {
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
     useEffect(() => {
-        const verifyAuth = async () => {
+        const verifySession = async () => {
             try {
-                const response = await fetch('/api/auth/me', { credentials: 'include' });
-                const data = await response.json();
-
-                if (response.ok && data.success) {
+                const res = await fetch('/api/auth/session');
+                if (res.ok) {
                     const savedUser = localStorage.getItem('user');
                     if (savedUser) {
-                        dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                        try {
+                            dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                        } catch (e) {
+                            localStorage.removeItem('user');
+                        }
                     }
                     router.push('/dashboard');
                 } else {
                     localStorage.removeItem('user');
-                    dispatch(logout());
+                    setIsCheckingAuth(false);
                 }
-            } catch (error) {
-                console.error('Auth verification failed:', error);
-                dispatch(logout());
-            } finally {
+            } catch (err) {
+                console.error('Session verify error:', err);
                 setIsCheckingAuth(false);
             }
         };
 
-        if (!isAuthenticated) {
-            verifyAuth();
-        } else {
+        if (isAuthenticated) {
             router.push('/dashboard');
-            setIsCheckingAuth(false);
+        } else {
+            verifySession();
         }
     }, [isAuthenticated, dispatch, router]);
 
@@ -50,10 +49,6 @@ export default function LoginPage() {
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
             </div>
         );
-    }
-
-    if (isAuthenticated) {
-        return null; // Will be redirected
     }
 
     return (

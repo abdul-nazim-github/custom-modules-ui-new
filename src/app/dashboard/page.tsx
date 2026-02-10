@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { setCredentials, logout } from '@/lib/features/auth/authSlice';
@@ -11,41 +11,58 @@ export default function Dashboard() {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(!isAuthenticated);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-    const verifyAuth = useCallback(async () => {
-        try {
-            const response = await fetch('/api/auth/me', { credentials: 'include' });
-            const data = await response.json();
+    // Session verification logic
+    useEffect(() => {
+        const verifySession = async () => {
+            try {
+                // 1. Check if secure cookies still exist
+                const res = await fetch('/api/auth/session');
 
-            if (response.ok && data.success) {
-                // Recover user info from localStorage if Redux state was lost on reload
-                const savedUser = localStorage.getItem('user');
-                if (savedUser) {
-                    dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                if (res.ok) {
+                    // Cookies exist, now try to restore user data from localStorage if Redux state is empty
+                    if (!isAuthenticated) {
+                        const savedUser = localStorage.getItem('user');
+                        if (savedUser) {
+                            dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                        } else {
+                            // Cookie exists but user data is gone? Force re-login
+                            router.push('/login');
+                        }
+                    }
+                    setIsCheckingAuth(false);
+                } else {
+                    // Cookies are missing (deleted or expired)
+                    console.warn('Session tokens missing. Redirecting to login.');
+                    localStorage.removeItem('user');
+                    dispatch(logout());
+                    router.push('/login');
                 }
-                setIsCheckingAuth(false);
-            } else {
-                console.warn('Auth verification failed. Redirecting to login.');
+            } catch (err) {
+                console.error('Session verification failed:', err);
+                router.push('/login');
+            }
+        };
+
+        verifySession();
+    }, [isAuthenticated, dispatch, router]);
+
+    // Background polling (optional but good for real-time security)
+    useEffect(() => {
+        if (isCheckingAuth || !isAuthenticated) return;
+
+        const interval = setInterval(async () => {
+            const res = await fetch('/api/auth/session');
+            if (!res.ok) {
                 localStorage.removeItem('user');
                 dispatch(logout());
                 router.push('/login');
             }
-        } catch (error) {
-            console.error('Auth verification error:', error);
-            dispatch(logout());
-            router.push('/login');
-        }
-    }, [dispatch, router]);
+        }, 5000);
 
-    useEffect(() => {
-        if (!isAuthenticated) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            verifyAuth();
-        } else {
-            setIsCheckingAuth(false);
-        }
-    }, [isAuthenticated, verifyAuth]);
+        return () => clearInterval(interval);
+    }, [isCheckingAuth, isAuthenticated, dispatch, router]);
 
     const handleLogout = async () => {
         try {
@@ -63,7 +80,6 @@ export default function Dashboard() {
         }
     };
 
-    // Show loading state while checking authentication
     if (isCheckingAuth) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -75,11 +91,7 @@ export default function Dashboard() {
         );
     }
 
-    // Double check guard - if we're not checking anymore but still not authenticated,
-    // we should have been redirected, but just in case:
-    if (!isAuthenticated) {
-        return null;
-    }
+    if (!isAuthenticated) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -121,7 +133,6 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {/* User Profile Info Card */}
                     <div className="overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-8 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
                         <div>
                             <div className="bg-purple-100 dark:bg-purple-900/30 p-4 rounded-2xl text-purple-600 dark:text-purple-400 w-fit mb-6">
