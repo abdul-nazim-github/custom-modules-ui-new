@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { logout } from '@/lib/features/auth/authSlice';
+import { setCredentials, logout } from '@/lib/features/auth/authSlice';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { LayoutDashboard, LogOut, User, ShieldCheck } from 'lucide-react';
 
@@ -11,16 +11,47 @@ export default function Dashboard() {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-    useEffect(() => {
-        if (!isAuthenticated) {
+    const [isCheckingAuth, setIsCheckingAuth] = useState(!isAuthenticated);
+
+    const verifyAuth = useCallback(async () => {
+        try {
+            const response = await fetch('/api/auth/me', { credentials: 'include' });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Recover user info from localStorage if Redux state was lost on reload
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                }
+                setIsCheckingAuth(false);
+            } else {
+                console.warn('Auth verification failed. Redirecting to login.');
+                localStorage.removeItem('user');
+                dispatch(logout());
+                router.push('/login');
+            }
+        } catch (error) {
+            console.error('Auth verification error:', error);
+            dispatch(logout());
             router.push('/login');
         }
-    }, [isAuthenticated, router]);
+    }, [dispatch, router]);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            verifyAuth();
+        } else {
+            setIsCheckingAuth(false);
+        }
+    }, [isAuthenticated, verifyAuth]);
 
     const handleLogout = async () => {
         try {
             const res = await fetch('/api/auth/logout', { method: 'POST' });
             if (res.ok) {
+                localStorage.removeItem('user');
                 dispatch(logout());
                 dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
                 router.push('/login');
@@ -32,12 +63,22 @@ export default function Dashboard() {
         }
     };
 
-    if (!isAuthenticated) {
+    // Show loading state while checking authentication
+    if (isCheckingAuth) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">Verifying session...</p>
+                </div>
             </div>
         );
+    }
+
+    // Double check guard - if we're not checking anymore but still not authenticated,
+    // we should have been redirected, but just in case:
+    if (!isAuthenticated) {
+        return null;
     }
 
     return (
@@ -87,24 +128,28 @@ export default function Dashboard() {
                                 <ShieldCheck className="h-8 w-8" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Account Status</h3>
-                            <p className="text-gray-600 dark:text-gray-400 mb-4 flex items-center gap-2">
-                                <span className="font-medium">Roles:</span>
-                                <span className="flex gap-1">
-                                    {user?.role?.map((r, i) => (
-                                        <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs font-bold uppercase tracking-wider">{r}</span>
-                                    ))}
-                                </span>
-                            </p>
-                        </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Roles</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {user?.role?.map((r, i) => (
+                                            <span key={i} className="px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-bold uppercase tracking-wider border border-purple-100 dark:border-purple-800">
+                                                {r}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
 
-                        <div className="space-y-3">
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Your Permissions</span>
-                            <div className="flex flex-wrap gap-2">
-                                {user?.permissions?.map((p, i) => (
-                                    <span key={i} className="px-2 py-1 text-[10px] bg-gray-100 dark:bg-gray-700 rounded-md text-gray-500 dark:text-gray-400 font-mono font-bold">
-                                        {p}
-                                    </span>
-                                ))}
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Permissions</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {user?.permissions?.map((p, i) => (
+                                            <span key={i} className="px-2.5 py-1 text-[10px] bg-gray-100 dark:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
+                                                {p}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

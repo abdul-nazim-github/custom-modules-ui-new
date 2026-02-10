@@ -54,6 +54,9 @@ export default function LoginForm() {
             const data = await response.json();
 
             if (response.ok && data.success) {
+                // Persist user info for session recovery on reload
+                localStorage.setItem('user', JSON.stringify(data.data.user));
+
                 // Update Redux state with user details
                 dispatch(setCredentials({ user: data.data.user }));
                 dispatch(showToast({ message: data.message || 'Login successful!', type: 'success' }));
