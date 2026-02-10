@@ -30,7 +30,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-50 dark:bg-gray-900">
       <div className="text-center max-w-2xl w-full">
         <h1 className="text-5xl font-extrabold mb-8 text-gray-900 dark:text-white tracking-tight">
-          Welcome{user ? `, ${user.name}` : ''}
+          Welcome{user ? `, ${user.full_name}` : ''}
         </h1>
 
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
