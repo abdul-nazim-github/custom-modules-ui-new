@@ -65,8 +65,8 @@ function ResetPasswordForm() {
 
         setPassword(retVal);
         setConfirmPassword(retVal);
-        setShowPassword(true);
-        setShowConfirmPassword(true);
+        setShowPassword(false);
+        setShowConfirmPassword(false);
         setPasswordError('');
         setConfirmPasswordError('');
     };
