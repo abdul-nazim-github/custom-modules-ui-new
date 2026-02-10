@@ -57,7 +57,7 @@ export default function LoginForm() {
                 // Update Redux state with user details
                 dispatch(setCredentials({ user: data.data.user }));
                 dispatch(showToast({ message: data.message || 'Login successful!', type: 'success' }));
-                router.push('/');
+                router.push('/dashboard');
             } else {
                 dispatch(showToast({ message: data.message || 'Login failed', type: 'error' }));
             }
@@ -151,7 +151,7 @@ export default function LoginForm() {
             </div>
             <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link
                         href="/register"
                         className="text-blue-600 hover:text-blue-700 font-bold transition-colors duration-200 cursor-pointer"

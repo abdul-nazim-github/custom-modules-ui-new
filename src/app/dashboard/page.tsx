@@ -1,0 +1,118 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { logout } from '@/lib/features/auth/authSlice';
+import { showToast } from '@/lib/features/toast/toastSlice';
+import { LayoutDashboard, LogOut, User, ShieldCheck } from 'lucide-react';
+
+export default function Dashboard() {
+    const router = useRouter();
+    const dispatch = useAppDispatch();
+    const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+        if (!isAuthenticated) {
+            router.push('/login');
+        }
+    }, [isAuthenticated, router]);
+
+    const handleLogout = async () => {
+        try {
+            const res = await fetch('/api/auth/logout', { method: 'POST' });
+            if (res.ok) {
+                dispatch(logout());
+                dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
+                router.push('/login');
+            } else {
+                dispatch(showToast({ message: 'Logout failed', type: 'error' }));
+            }
+        } catch (error) {
+            dispatch(showToast({ message: 'An error occurred during logout', type: 'error' }));
+        }
+    };
+
+    if (!isMounted || !isAuthenticated) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+            {/* Navigation */}
+            <nav className="border-b bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="flex h-16 justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-blue-600 p-2 rounded-lg">
+                                <LayoutDashboard className="h-5 w-5 text-white" />
+                            </div>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">Admin Dashboard</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600">
+                                <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.full_name}</span>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                <span className="hidden sm:inline font-medium">Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+                <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
+                        Welcome back, <span className="text-blue-600 font-black">{user?.full_name?.split(' ')[0]}</span>!
+                    </h1>
+                    <p className="mt-3 text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
+                        Monitor activity and manage modules from your central command center.
+                    </p>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {/* User Profile Info Card */}
+                    <div className="overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-8 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+                        <div>
+                            <div className="bg-purple-100 dark:bg-purple-900/30 p-4 rounded-2xl text-purple-600 dark:text-purple-400 w-fit mb-6">
+                                <ShieldCheck className="h-8 w-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Account Status</h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-4 flex items-center gap-2">
+                                <span className="font-medium">Roles:</span>
+                                <span className="flex gap-1">
+                                    {user?.role?.map((r, i) => (
+                                        <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs font-bold uppercase tracking-wider">{r}</span>
+                                    ))}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div className="space-y-3">
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Your Permissions</span>
+                            <div className="flex flex-wrap gap-2">
+                                {user?.permissions?.map((p, i) => (
+                                    <span key={i} className="px-2 py-1 text-[10px] bg-gray-100 dark:bg-gray-700 rounded-md text-gray-500 dark:text-gray-400 font-mono font-bold">
+                                        {p}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}
