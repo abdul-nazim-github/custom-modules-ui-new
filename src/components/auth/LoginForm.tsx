@@ -124,7 +124,15 @@ export default function LoginForm() {
                     <p className="text-red-500 text-xs mt-1 font-medium">{errors.password}</p>
                 )}
             </div>
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-end mb-4">
+                <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200 cursor-pointer"
+                >
+                    Forgot Password?
+                </Link>
+            </div>
+            <div className="flex items-center justify-between">
                 <button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-[0.98] cursor-pointer"
                     type="submit"
