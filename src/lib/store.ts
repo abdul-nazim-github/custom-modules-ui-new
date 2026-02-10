@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import counterReducer from './features/counter/counterSlice'
 import toastReducer from './features/toast/toastSlice'
-import authReducer from './features/auth/authSlice'
 import { pokemonApi } from './services/pokemon'
 
 export const makeStore = () => {
@@ -9,7 +8,6 @@ export const makeStore = () => {
     reducer: {
       counter: counterReducer,
       toast: toastReducer,
-      auth: authReducer,
       [pokemonApi.reducerPath]: pokemonApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
