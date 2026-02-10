@@ -1,14 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/contact/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011"}/api/contact/:path*`,
-      },
-    ];
-  },
+  /* config options here */
 };
 
 export default nextConfig;
