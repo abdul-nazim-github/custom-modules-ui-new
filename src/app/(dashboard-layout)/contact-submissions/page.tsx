@@ -7,7 +7,7 @@ import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 
 interface ContactSubmission {
-    id: string;
+    _id: string;
     name: string;
     email: string;
     subject: string;
@@ -121,7 +121,7 @@ export default function ContactFormPage() {
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {filteredSubmissions.map((submission) => (
-                                <tr key={submission.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <tr key={submission._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
                                             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
