@@ -4,7 +4,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const response = await fetch('http://localhost:3011/api/auth/login', {
+    const apiUrl = process.env.API_BASE_URL || 'http://localhost:3011';
+    const response = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

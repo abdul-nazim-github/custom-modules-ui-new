@@ -9,7 +9,7 @@ export default function ProfilePage() {
 
     if (!user) return null;
 
-    const hasPermission = user.permissions.includes('modules~permission~profile') || user.role.includes('super_admin');
+    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~profile');
 
     if (!hasPermission) {
         notFound();

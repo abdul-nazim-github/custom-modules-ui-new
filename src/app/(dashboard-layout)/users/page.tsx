@@ -1,31 +1,127 @@
 "use client";
 
-import { useState } from 'react';
-import { Users, Search, Filter, MoreVertical, Edit2, Shield, Trash2, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Search, Filter, Edit2, Shield, UserPlus, Save, X, Loader2 } from 'lucide-react';
 import { useAppSelector } from '@/lib/hooks';
 import Link from 'next/link';
-
 import { notFound } from 'next/navigation';
+import { showToast } from '@/lib/features/toast/toastSlice';
+import { useAppDispatch } from '@/lib/hooks';
+
+interface User {
+    id: string;
+    email: string;
+    full_name: string;
+    role: string[];
+    permissions: string[];
+    created_at: string;
+}
 
 export default function UsersPage() {
     const { user } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
     const [searchTerm, setSearchTerm] = useState('');
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
+    const [saving, setSaving] = useState(false);
 
-    if (!user?.role?.includes('super_admin')) {
+    const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_users');
+    const canManagePermissions = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_permissions');
+
+    if (!hasAccess) {
         notFound();
     }
 
-    const mockUsers = [
-        { id: '1', full_name: 'Ai Use Mail', email: 'aiusemail01@gmail.com', role: ['user'], permissions: ['modules~permission~profile', 'modules~permission~settings'], status: 'active' },
-        { id: '2', full_name: 'Super Admin', email: 'admin@example.com', role: ['super_admin'], permissions: ['*'], status: 'active' },
-        { id: '3', full_name: 'Sarah Connor', email: 'sarah@resistance.com', role: ['user'], permissions: ['modules~permission~profile'], status: 'inactive' },
-        { id: '4', full_name: 'John Doe', email: 'john@example.com', role: ['manager'], permissions: ['modules~permission~profile', 'modules~permission~activity'], status: 'active' },
-    ];
+    useEffect(() => {
+        fetchUsers();
+    }, []);
 
-    const filteredUsers = mockUsers.filter(user =>
-        user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/auth/users?page=1&limit=100&sortBy=name&order=asc');
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                setUsers(result.data);
+            } else {
+                dispatch(showToast({ message: 'Failed to load users', type: 'error' }));
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            dispatch(showToast({ message: 'Error loading users', type: 'error' }));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditClick = (userId: string, fullName: string) => {
+        if (userId === user?.id) {
+            dispatch(showToast({ message: 'You cannot edit your own name', type: 'error' }));
+            return;
+        }
+        setEditingUserId(userId);
+        setEditName(fullName);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingUserId(null);
+        setEditName('');
+    };
+
+    const handleSaveName = async (userId: string) => {
+        if (!editName.trim()) {
+            dispatch(showToast({ message: 'Name cannot be empty', type: 'error' }));
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const nameParts = editName.trim().split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+
+            const response = await fetch('/api/auth/profile/edit', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ first_name: firstName, last_name: lastName }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                dispatch(showToast({ message: 'Name updated successfully', type: 'success' }));
+                setEditingUserId(null);
+                setEditName('');
+                fetchUsers(); // Refresh the list
+            } else {
+                dispatch(showToast({ message: result.message || 'Failed to update name', type: 'error' }));
+            }
+        } catch (error) {
+            console.error('Error updating name:', error);
+            dispatch(showToast({ message: 'Error updating name', type: 'error' }));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const filteredUsers = users.filter(u =>
+        u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">Loading users...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -34,10 +130,6 @@ export default function UsersPage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">User Management</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">View and manage all registered users in the system.</p>
                 </div>
-                <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer">
-                    <UserPlus className="h-4 w-4" />
-                    Add New User
-                </button>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -52,11 +144,8 @@ export default function UsersPage() {
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer">
-                            <Filter className="h-4 w-4" />
-                            Filter
-                        </button>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-bold text-gray-900 dark:text-white">{filteredUsers.length}</span> users found
                     </div>
                 </div>
 
@@ -66,27 +155,55 @@ export default function UsersPage() {
                             <tr className="bg-gray-50/50 dark:bg-gray-900/50">
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredUsers.map((user) => (
-                                <tr key={user.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                            {filteredUsers.map((u) => (
+                                <tr key={u.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
                                             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
-                                                {user.full_name.charAt(0)}
+                                                {u.full_name.charAt(0)}
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-gray-900 dark:text-white">{user.full_name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                                            <div className="flex-1">
+                                                {editingUserId === u.id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={editName}
+                                                            onChange={(e) => setEditName(e.target.value)}
+                                                            className="px-3 py-1.5 text-sm font-bold bg-white dark:bg-gray-900 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                            autoFocus
+                                                        />
+                                                        <button
+                                                            onClick={() => handleSaveName(u.id)}
+                                                            disabled={saving}
+                                                            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleCancelEdit}
+                                                            disabled={saving}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{u.full_name}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
                                         <div className="flex flex-wrap gap-1">
-                                            {user.role.map((r, i) => (
+                                            {u.role.map((r, i) => (
                                                 <span key={i} className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-purple-100/50 dark:border-purple-800/50">
                                                     {r}
                                                 </span>
@@ -94,27 +211,48 @@ export default function UsersPage() {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.status === 'active'
-                                            ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                                            }`}>
-                                            {user.status}
-                                        </span>
+                                        <div className="flex flex-wrap gap-1 max-w-xs">
+                                            {u.permissions.slice(0, 3).map((p, i) => (
+                                                <span key={i} className="px-2 py-0.5 text-[9px] bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
+                                                    {p.replace('modules~permission~', '')}
+                                                </span>
+                                            ))}
+                                            {u.permissions.length > 3 && (
+                                                <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 font-bold">
+                                                    +{u.permissions.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Link
-                                                href={`/permissions?user=${user.id}`}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                title="Manage Permissions"
+                                            {canManagePermissions ? (
+                                                <Link
+                                                    href={`/permissions?user=${u.id}`}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                    title="Manage Permissions"
+                                                >
+                                                    <Shield className="h-4 w-4" />
+                                                </Link>
+                                            ) : (
+                                                <button
+                                                    disabled
+                                                    className="p-2 text-gray-300 dark:text-gray-600 rounded-lg cursor-not-allowed"
+                                                    title="You don't have permission to manage permissions"
+                                                >
+                                                    <Shield className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleEditClick(u.id, u.full_name)}
+                                                disabled={u.id === user?.id || editingUserId !== null}
+                                                className={`p-2 rounded-lg transition-colors ${u.id === user?.id
+                                                    ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
+                                                    }`}
+                                                title={u.id === user?.id ? 'You cannot edit your own name' : 'Edit name'}
                                             >
-                                                <Shield className="h-4 w-4" />
-                                            </Link>
-                                            <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors cursor-pointer">
                                                 <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer">
-                                                <Trash2 className="h-4 w-4" />
                                             </button>
                                         </div>
                                     </td>

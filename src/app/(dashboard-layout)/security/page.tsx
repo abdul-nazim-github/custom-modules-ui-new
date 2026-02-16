@@ -1,142 +1,290 @@
 "use client";
 
-import { Shield, Key, Smartphone, Lock, Eye, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Shield, Key, Eye, EyeOff, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { useAppSelector } from '@/lib/hooks';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { notFound } from 'next/navigation';
+import { showToast } from '@/lib/features/toast/toastSlice';
 
 export default function SecurityPage() {
     const { user } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
     const [showCurrentPass, setShowCurrentPass] = useState(false);
     const [showNewPass, setShowNewPass] = useState(false);
+    const [showConfirmPass, setShowConfirmPass] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const [formData, setFormData] = useState({
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
 
     if (!user) return null;
 
-    const hasPermission = user.permissions.includes('modules~permission~security') || user.role.includes('super_admin');
+    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~security');
 
     if (!hasPermission) {
         notFound();
     }
 
+    const validatePassword = (password: string) => {
+        const minLength = password.length >= 8;
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+        return {
+            minLength,
+            hasUpper,
+            hasLower,
+            hasNumber,
+            hasSpecial,
+            isValid: minLength && hasUpper && hasLower && hasNumber && hasSpecial
+        };
+    };
+
+    const passwordValidation = validatePassword(formData.newPassword);
+    const passwordsMatch = formData.newPassword === formData.confirmPassword;
+    const canSubmit = formData.oldPassword && formData.newPassword && formData.confirmPassword &&
+        passwordValidation.isValid && passwordsMatch;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!canSubmit) {
+            dispatch(showToast({ message: 'Please fill all fields correctly', type: 'error' }));
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await fetch('/api/password/change', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    oldPassword: formData.oldPassword,
+                    newPassword: formData.newPassword
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                dispatch(showToast({ message: 'Password changed successfully', type: 'success' }));
+                setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+            } else {
+                dispatch(showToast({ message: result.message || 'Failed to change password', type: 'error' }));
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+            dispatch(showToast({ message: 'Error changing password', type: 'error' }));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
                 <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Security Center</h1>
-                <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your password, 2FA, and account security preferences.</p>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your account security and password settings.</p>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-                {/* Password Update */}
-                <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-gray-100 dark:border-gray-700">
-                        <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center rounded-2xl text-blue-600 mb-6">
+            {/* Password Change Form */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                <div className="p-8 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                    <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-blue-600 font-black shadow-sm">
                             <Key className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h3>
-                        <p className="text-sm text-gray-500 mt-1">Update your account password regularly for better security.</p>
-                    </div>
-                    <div className="p-8 space-y-6 flex-1">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Current Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showCurrentPass ? "text" : "password"}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="••••••••"
-                                />
-                                <button
-                                    onClick={() => setShowCurrentPass(!showCurrentPass)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                                >
-                                    {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
-                            </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Update your password to keep your account secure</p>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 dark:text-gray-300">New Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showNewPass ? "text" : "password"}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="••••••••"
-                                />
-                                <button
-                                    onClick={() => setShowNewPass(!showNewPass)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                                >
-                                    {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        </div>
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl">
-                            <h4 className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Password Requirements
-                            </h4>
-                            <ul className="text-xs text-blue-600 dark:text-blue-500 space-y-1">
-                                <li>• At least 8 characters long</li>
-                                <li>• Include at least one special character</li>
-                                <li>• Mix of letters and numbers</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="p-8 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
-                        <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer">
-                            Update Password
-                        </button>
                     </div>
                 </div>
 
-                {/* 2FA & Security Stats */}
-                <div className="space-y-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                        <div className="p-8">
-                            <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center rounded-2xl text-emerald-600 mb-6 font-bold">
-                                <Smartphone className="h-6 w-6" />
-                            </div>
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Two-Factor Authentication</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
-                                </div>
-                                <div className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold uppercase tracking-wider border border-red-50 dark:border-red-900/30">
-                                    Off
-                                </div>
-                            </div>
-                            <button className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                                Enable 2FA <Lock className="h-4 w-4" />
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                    {/* Current Password */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Current Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showCurrentPass ? 'text' : 'password'}
+                                name="oldPassword"
+                                value={formData.oldPassword}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
+                                placeholder="Enter your current password"
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowCurrentPass(!showCurrentPass)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            >
+                                {showCurrentPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-orange-100 dark:border-orange-900/30 shadow-sm overflow-hidden">
-                        <div className="p-8">
-                            <div className="h-12 w-12 bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center rounded-2xl text-orange-600 mb-6 font-bold">
-                                <AlertTriangle className="h-6 w-6" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Security Warning</h3>
-                            <p className="text-sm text-gray-500 leading-relaxed">
-                                You haven't updated your password in over 3 months. To keep your account safe, we recommend changing it.
-                            </p>
+                    {/* New Password */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            New Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showNewPass ? 'text' : 'password'}
+                                name="newPassword"
+                                value={formData.newPassword}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
+                                placeholder="Enter your new password"
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPass(!showNewPass)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            >
+                                {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
                         </div>
+
+                        {/* Password Requirements */}
+                        {formData.newPassword && (
+                            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Password Requirements</p>
+                                <div className="space-y-2">
+                                    <PasswordRequirement met={passwordValidation.minLength} text="At least 8 characters" />
+                                    <PasswordRequirement met={passwordValidation.hasUpper} text="One uppercase letter" />
+                                    <PasswordRequirement met={passwordValidation.hasLower} text="One lowercase letter" />
+                                    <PasswordRequirement met={passwordValidation.hasNumber} text="One number" />
+                                    <PasswordRequirement met={passwordValidation.hasSpecial} text="One special character" />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-black rounded-3xl p-8 text-white relative overflow-hidden">
-                        <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Security Score</h4>
-                        <div className="flex items-end gap-3 mb-2">
-                            <span className="text-6xl font-black">74</span>
-                            <span className="text-xl font-bold text-gray-400 mb-2">/100</span>
+                    {/* Confirm Password */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Confirm New Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showConfirmPass ? 'text' : 'password'}
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
+                                placeholder="Confirm your new password"
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            >
+                                {showConfirmPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
                         </div>
-                        <div className="h-2 w-full bg-gray-700 rounded-full mt-4 overflow-hidden">
-                            <div className="h-full w-3/4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-6 leading-relaxed">
-                            Your security score is good, but could be better by enabling 2FA and updating your recovery email.
-                        </p>
-                        <div className="absolute top-0 right-0 -mr-16 -mt-16 h-48 w-48 bg-blue-600/10 rounded-full blur-3xl"></div>
+                        {formData.confirmPassword && (
+                            <div className="mt-2">
+                                {passwordsMatch ? (
+                                    <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Passwords match
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Passwords do not match
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-4">
+                        <button
+                            type="submit"
+                            disabled={!canSubmit || loading}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Changing Password...
+                                </>
+                            ) : (
+                                <>
+                                    <Key className="h-5 w-5" />
+                                    Change Password
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Security Tips */}
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-3xl border border-orange-100 dark:border-orange-800 p-8">
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
+                        <Shield className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Security Best Practices</h4>
+                        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                            <li className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                Use a unique password that you don't use anywhere else
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                Change your password regularly (every 3-6 months)
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                Never share your password with anyone
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                Use a password manager to store your passwords securely
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+    return (
+        <div className="flex items-center gap-2">
+            {met ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+            ) : (
+                <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+            )}
+            <span className={`text-sm ${met ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {text}
+            </span>
         </div>
     );
 }

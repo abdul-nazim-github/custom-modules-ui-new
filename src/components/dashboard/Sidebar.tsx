@@ -11,7 +11,8 @@ import {
     Users,
     Lock,
     LogOut,
-    ChevronRight
+    ChevronRight,
+    Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
@@ -42,25 +43,25 @@ export default function Sidebar({ className }: SidebarProps) {
             name: 'Profile',
             href: '/profile',
             icon: User,
-            show: user?.permissions?.includes('modules~permission~profile') || isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~profile')
         },
         {
             name: 'Activity',
             href: '/activity',
             icon: Activity,
-            show: user?.permissions?.includes('modules~permission~activity') || isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~activity')
         },
         {
             name: 'Settings',
             href: '/settings',
             icon: Settings,
-            show: user?.permissions?.includes('modules~permission~settings') || isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~settings')
         },
         {
             name: 'Security',
             href: '/security',
             icon: Shield,
-            show: user?.permissions?.includes('modules~permission~security') || isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~security')
         }
     ];
 
@@ -69,27 +70,32 @@ export default function Sidebar({ className }: SidebarProps) {
             name: 'Users',
             href: '/users',
             icon: Users,
-            show: isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~manage_users')
         },
         {
             name: 'Permissions',
             href: '/permissions',
             icon: Lock,
-            show: isSuperAdmin
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~manage_permissions')
+        },
+        {
+            name: 'Contact Submissions',
+            href: '/contact-submissions',
+            icon: Mail,
+            show: isSuperAdmin || user?.permissions?.includes('modules~permission~contact_form')
         }
     ];
 
     const handleLogout = async () => {
         try {
-            const res = await fetch('/api/auth/logout', { method: 'POST' });
-            if (res.ok) {
-                localStorage.removeItem('user');
-                dispatch(logout());
-                dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
-                router.push('/login');
-            }
+            await fetch('/api/auth/logout', { method: 'POST' });
         } catch (error) {
-            dispatch(showToast({ message: 'Logout failed', type: 'error' }));
+            console.error('Logout API call failed:', error);
+        } finally {
+            localStorage.removeItem('user');
+            dispatch(logout());
+            dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
+            router.push('/login');
         }
     };
 

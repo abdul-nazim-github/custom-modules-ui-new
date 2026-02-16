@@ -11,7 +11,7 @@ export default function SettingsPage() {
 
     if (!user) return null;
 
-    const hasPermission = user.permissions.includes('modules~permission~settings') || user.role.includes('super_admin');
+    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~settings');
 
     if (!hasPermission) {
         notFound();
