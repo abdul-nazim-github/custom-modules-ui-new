@@ -82,11 +82,11 @@ export default function SecurityPage() {
 
             const result = await response.json();
 
-            if (response.ok && result.success) {
-                dispatch(showToast({ message: 'Password changed successfully', type: 'success' }));
+            if (response.ok) {
+                dispatch(showToast({ message: result.message || 'Password changed successfully', type: 'success' }));
                 setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             } else {
-                dispatch(showToast({ message: result.message || 'Failed to change password', type: 'error' }));
+                dispatch(showToast({ message: result.message || result.error || 'Failed to change password', type: 'error' }));
             }
         } catch (error) {
             console.error('Error changing password:', error);

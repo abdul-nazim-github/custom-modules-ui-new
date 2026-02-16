@@ -1,17 +1,34 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
-import { User, Mail, Shield, Calendar, Edit2, Camera } from 'lucide-react';
+import { updateUser } from '@/lib/features/auth/authSlice';
+import { User, Mail, Shield, Calendar, Edit2, Camera, Loader2, Save, X } from 'lucide-react';
 
 export default function ProfilePage() {
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
     const router = useRouter();
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: ''
+    });
 
     const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~profile');
+
+    useEffect(() => {
+        if (user) {
+            const names = user.full_name.split(' ');
+            setFormData({
+                first_name: names[0] || '',
+                last_name: names.slice(1).join(' ') || ''
+            });
+        }
+    }, [user]);
 
     useEffect(() => {
         if (user && !hasPermission) {
@@ -20,13 +37,75 @@ export default function ProfilePage() {
         }
     }, [user, hasPermission, router, dispatch]);
 
+    const handleSave = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/auth/profile/edit', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                const updatedFullName = `${formData.first_name} ${formData.last_name}`.trim();
+                dispatch(updateUser({ full_name: updatedFullName }));
+                dispatch(showToast({ message: 'Profile updated successfully', type: 'success' }));
+                setIsEditing(false);
+                // Also update localStorage so it persists on reload
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    const userObj = JSON.parse(savedUser);
+                    localStorage.setItem('user', JSON.stringify({ ...userObj, full_name: updatedFullName }));
+                }
+            } else {
+                dispatch(showToast({ message: result.message || result.error || 'Failed to update profile', type: 'error' }));
+            }
+        } catch (error) {
+            console.error('Update profile error:', error);
+            dispatch(showToast({ message: 'An error occurred while updating profile', type: 'error' }));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (!user) return null;
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div>
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Profile Settings</h1>
-                <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your public profile and account information.</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Profile Settings</h1>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your public profile and account information.</p>
+                </div>
+                {isEditing ? (
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                        >
+                            <X className="h-4 w-4" />
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={loading}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
+                        >
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Save Changes
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
+                    >
+                        <Edit2 className="h-4 w-4" />
+                        Edit Profile
+                    </button>
+                )}
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">
@@ -42,7 +121,9 @@ export default function ProfilePage() {
                                     <Camera className="h-6 w-6 text-white" />
                                 </div>
                             </div>
-                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">{user.full_name}</h2>
+                            <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white text-center">
+                                {isEditing ? `${formData.first_name} ${formData.last_name}` : user.full_name}
+                            </h2>
                             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mt-1">{user.role[0]}</p>
                         </div>
 
@@ -68,23 +149,45 @@ export default function ProfilePage() {
                 {/* Right Column - User Details */}
                 <div className="lg:col-span-2">
                     <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                        <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Account Details</h3>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25">
-                                <Edit2 className="h-4 w-4" />
-                                Edit Profile
-                            </button>
                         </div>
                         <div className="p-8 grid gap-8 md:grid-cols-2">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Full Name</label>
-                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
-                                    {user.full_name}
-                                </div>
+                                <label className="text-sm font-bold text-gray-500 dark:text-gray-400">First Name</label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={formData.first_name}
+                                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        placeholder="Enter first name"
+                                    />
+                                ) : (
+                                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
+                                        {user.full_name.split(' ')[0]}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Last Name</label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={formData.last_name}
+                                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        placeholder="Enter last name"
+                                    />
+                                ) : (
+                                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
+                                        {user.full_name.split(' ').slice(1).join(' ')}
+                                    </div>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Email</label>
-                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
+                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 font-medium">
                                     {user.email}
                                 </div>
                             </div>
@@ -98,7 +201,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Account ID</label>
-                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 font-mono text-sm">
+                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 font-mono text-sm overflow-hidden text-ellipsis">
                                     {user.id}
                                 </div>
                             </div>
