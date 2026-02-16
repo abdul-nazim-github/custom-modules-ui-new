@@ -36,18 +36,18 @@ export default function DashboardLayout({
                         if (savedUser) {
                             dispatch(setCredentials({ user: JSON.parse(savedUser) }));
                         } else {
-                            router.push('/login');
+                            window.location.href = '/login';
                         }
                     }
                     setIsCheckingAuth(false);
                 } else {
                     localStorage.removeItem('user');
                     dispatch(logout());
-                    router.push('/login');
+                    window.location.href = '/login';
                 }
             } catch (err) {
                 console.error('Session verification failed:', err);
-                router.push('/login');
+                window.location.href = '/login';
             }
         };
 
@@ -63,7 +63,7 @@ export default function DashboardLayout({
             if (!res.ok) {
                 localStorage.removeItem('user');
                 dispatch(logout());
-                router.push('/login');
+                window.location.href = '/login';
             }
         }, 10000); // Check every 10 seconds
 

@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
@@ -48,13 +49,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Validation failed. Please check your input." }, { status: 400 });
     }
     // --- Backend Submission ---
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('accessToken')?.value;
+
+    const backendUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
 
     const backendResponse = await fetch(`${backendUrl}/api/contact/submit`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ name, email, subject, message }),
     });
 

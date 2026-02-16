@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "10";
-    // Proxy the 'per_page' if the frontend sends it, or handle 'limit'.
-    // Given the previous diff, frontend sends 'limit'. Backend curl shows 'limit'.
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('accessToken')?.value;
 
-    // Construct query string manually to ensure correct params are forwarded
+    const backendUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
+
     const queryParams = new URLSearchParams();
     queryParams.append("page", page);
-    queryParams.append("limit", limit); // Using 'limit' as requested
+    queryParams.append("limit", limit);
 
     const response = await fetch(`${backendUrl}/api/contact/list?${queryParams.toString()}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
       },
-      cache: "no-store", // Ensure we don't cache locally
+      cache: "no-store",
     });
 
     const data = await response.json();

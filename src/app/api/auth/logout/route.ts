@@ -8,21 +8,26 @@ export async function POST() {
 
     const API_BASE_URL = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3011';
 
-    const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
-      },
-    });
+    // Try to notify backend, but don't let it block local logout
+    try {
+      if (accessToken) {
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+        });
+      }
+    } catch (e) {
+      console.error('Backend logout notification failed:', e);
+    }
 
-    const data = await response.json();
+    const nextResponse = NextResponse.json({ success: true, message: 'Logged out' });
 
-    const nextResponse = NextResponse.json(data, { status: response.status });
-
-    // Clear cookies regardless of backend success
-    nextResponse.cookies.delete('accessToken');
-    nextResponse.cookies.delete('refreshToken');
+    // Force clear cookies
+    nextResponse.cookies.set('accessToken', '', { path: '/', maxAge: 0 });
+    nextResponse.cookies.set('refreshToken', '', { path: '/', maxAge: 0 });
 
     return nextResponse;
   } catch (error) {

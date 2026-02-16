@@ -2,20 +2,27 @@
 
 import { Settings, Bell, Globe, Moon, Sun, Monitor, Palette, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { useAppSelector } from '@/lib/hooks';
-import { notFound } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { notFound, useRouter } from 'next/navigation';
+import { showToast } from '@/lib/features/toast/toastSlice';
 
 export default function SettingsPage() {
     const { user } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
+    const router = useRouter();
     const [theme, setTheme] = useState('system');
 
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~settings');
+
+    useEffect(() => {
+        if (user && !hasPermission) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [user, hasPermission, router, dispatch]);
+
     if (!user) return null;
-
-    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~settings');
-
-    if (!hasPermission) {
-        notFound();
-    }
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">

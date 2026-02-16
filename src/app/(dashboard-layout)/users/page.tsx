@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, Search, Filter, Edit2, Shield, UserPlus, Save, X, Loader2 } from 'lucide-react';
 import { useAppSelector } from '@/lib/hooks';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { useAppDispatch } from '@/lib/hooks';
 
@@ -18,6 +18,7 @@ interface User {
 }
 
 export default function UsersPage() {
+    const router = useRouter();
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
     const [searchTerm, setSearchTerm] = useState('');
@@ -30,9 +31,12 @@ export default function UsersPage() {
     const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_users');
     const canManagePermissions = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_permissions');
 
-    if (!hasAccess) {
-        notFound();
-    }
+    useEffect(() => {
+        if (!loading && !hasAccess && user) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [hasAccess, loading, user, router, dispatch]);
 
     useEffect(() => {
         fetchUsers();

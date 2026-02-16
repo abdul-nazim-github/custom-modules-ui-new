@@ -32,11 +32,11 @@ function PermissionsContent() {
     const hasAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('modules~permission~manage_permissions');
 
     useEffect(() => {
-        if (!loading && !hasAccess) {
+        if (!loading && !hasAccess && loggedInUser) {
             router.push('/dashboard');
             dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
         }
-    }, [hasAccess, loading, router, dispatch]);
+    }, [hasAccess, loading, router, dispatch, loggedInUser]);
 
     useEffect(() => {
         if (!userId) {

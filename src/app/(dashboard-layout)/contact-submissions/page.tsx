@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Mail, Search, Eye, Loader2, Calendar, User as UserIcon } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 
 interface ContactSubmission {
@@ -18,6 +18,7 @@ interface ContactSubmission {
 export default function ContactFormPage() {
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
+    const router = useRouter();
     const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,9 +26,14 @@ export default function ContactFormPage() {
 
     const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~contact_form');
 
-    if (!hasAccess) {
-        notFound();
-    }
+    useEffect(() => {
+        if (user && !hasAccess) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [user, hasAccess, router, dispatch]);
+
+    if (!user) return null;
 
     useEffect(() => {
         fetchSubmissions();
@@ -62,9 +68,7 @@ export default function ContactFormPage() {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            day: 'numeric'
         });
     };
 

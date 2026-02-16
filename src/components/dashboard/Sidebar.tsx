@@ -94,8 +94,7 @@ export default function Sidebar({ className }: SidebarProps) {
         } finally {
             localStorage.removeItem('user');
             dispatch(logout());
-            dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
-            router.push('/login');
+            window.location.href = '/login';
         }
     };
 

@@ -1,14 +1,15 @@
 "use client";
 
 import { Shield, Key, Eye, EyeOff, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 
 export default function SecurityPage() {
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
+    const router = useRouter();
     const [showCurrentPass, setShowCurrentPass] = useState(false);
     const [showNewPass, setShowNewPass] = useState(false);
     const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -20,13 +21,16 @@ export default function SecurityPage() {
         confirmPassword: ''
     });
 
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~security');
+
+    useEffect(() => {
+        if (user && !hasPermission) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [user, hasPermission, router, dispatch]);
+
     if (!user) return null;
-
-    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~security');
-
-    if (!hasPermission) {
-        notFound();
-    }
 
     const validatePassword = (password: string) => {
         const minLength = password.length >= 8;

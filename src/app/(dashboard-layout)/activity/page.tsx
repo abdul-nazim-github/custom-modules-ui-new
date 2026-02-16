@@ -1,19 +1,26 @@
 "use client";
 
 import { Activity, Clock, LogIn, Key, Shield, User } from 'lucide-react';
-import { useAppSelector } from '@/lib/hooks';
-import { notFound } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { notFound, useRouter } from 'next/navigation';
+import { showToast } from '@/lib/features/toast/toastSlice';
 
 export default function ActivityPage() {
     const { user } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~activity');
+
+    useEffect(() => {
+        if (user && !hasPermission) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [user, hasPermission, router, dispatch]);
 
     if (!user) return null;
-
-    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~activity');
-
-    if (!hasPermission) {
-        notFound();
-    }
     const activities = [
         { id: 1, type: 'login', title: 'Successful Login', description: 'Logged in from Chrome on MacOS', time: '2 hours ago', icon: LogIn, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
         { id: 2, type: 'security', title: 'Password Changed', description: 'Updated account password for better security', time: 'Yesterday', icon: Key, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },

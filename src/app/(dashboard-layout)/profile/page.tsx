@@ -1,19 +1,26 @@
 "use client";
 
-import { useAppSelector } from '@/lib/hooks';
-import { notFound } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { notFound, useRouter } from 'next/navigation';
+import { showToast } from '@/lib/features/toast/toastSlice';
 import { User, Mail, Shield, Calendar, Edit2, Camera } from 'lucide-react';
 
 export default function ProfilePage() {
     const { user } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~profile');
+
+    useEffect(() => {
+        if (user && !hasPermission) {
+            router.push('/dashboard');
+            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+        }
+    }, [user, hasPermission, router, dispatch]);
 
     if (!user) return null;
-
-    const hasPermission = user.role.includes('super_admin') || user.permissions.includes('modules~permission~profile');
-
-    if (!hasPermission) {
-        notFound();
-    }
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
