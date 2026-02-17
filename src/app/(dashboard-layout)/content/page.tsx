@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface ContentItem {
     id?: string;
@@ -121,7 +123,7 @@ export default function ContentPage() {
 
     const filteredContent = contentList;
 
-    if (loading && page === 1 && contentList.length === 0) {
+    if (!loggedInUser && loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
@@ -160,83 +162,101 @@ export default function ContentPage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Title</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Short Description</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Created At</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredContent.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-8 py-10 text-center text-gray-500">
-                                        No content found.
-                                    </td>
+                    {loading ? (
+                        <div className="p-8">
+                            <TableSkeleton rows={limit} columns={4} />
+                        </div>
+                    ) : filteredContent.length === 0 ? (
+                        <EmptyState
+                            title={searchQuery ? "No content found" : "No content yet"}
+                            description={searchQuery
+                                ? `No content modules matched your search for "${searchTerm}"`
+                                : "Start creating and managing your website's content modules."}
+                            icon={<FileText className="h-12 w-12 text-gray-400" />}
+                            action={isSuperAdmin ? {
+                                label: "Add Content",
+                                onClick: () => router.push('/content/create')
+                            } : undefined}
+                        />
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-50/50 dark:bg-gray-900/50">
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Title</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Short Description</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Created At</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
-                            ) : (
-                                filteredContent.map((item) => {
-                                    const contentId = item.id || item._id;
-                                    return (
-                                        <tr key={contentId} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                        <FileText className="h-5 w-5" />
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {filteredContent.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-8 py-10 text-center text-gray-500">
+                                            No content found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredContent.map((item) => {
+                                        const contentId = item.id || item._id;
+                                        return (
+                                            <tr key={contentId} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                            <FileText className="h-5 w-5" />
+                                                        </div>
+                                                        <span className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.title}</span>
                                                     </div>
-                                                    <span className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.title}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs">{item.shortDescription}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${item.status === 1
-                                                    ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-100/50 dark:border-green-800/50"
-                                                    : "bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400 border-gray-100/50 dark:border-gray-800/50"
-                                                    }`}>
-                                                    {item.status === 1 ? 'Active' : 'Inactive'}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {new Date(item.created_at).toLocaleDateString()}
-                                                </p>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Link
-                                                        href={`/content/view/${contentId}`}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                                        title="View Content"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                    <Link
-                                                        href={`/content/edit/${contentId}`}
-                                                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
-                                                        title="Edit Content"
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => contentId && openDeleteModal(contentId, item.title)}
-                                                        className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors cursor-pointer"
-                                                        title="Delete Content"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs">{item.shortDescription}</p>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${item.status === 1
+                                                        ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-100/50 dark:border-green-800/50"
+                                                        : "bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400 border-gray-100/50 dark:border-gray-800/50"
+                                                        }`}>
+                                                        {item.status === 1 ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {new Date(item.created_at).toLocaleDateString()}
+                                                    </p>
+                                                </td>
+                                                <td className="px-8 py-6 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Link
+                                                            href={`/content/view/${contentId}`}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                                            title="View Content"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Link>
+                                                        <Link
+                                                            href={`/content/edit/${contentId}`}
+                                                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
+                                                            title="Edit Content"
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => contentId && openDeleteModal(contentId, item.title)}
+                                                            className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+                                                            title="Delete Content"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 <Pagination

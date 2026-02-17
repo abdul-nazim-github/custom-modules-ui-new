@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { useAppDispatch } from '@/lib/hooks';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { UserPlus } from 'lucide-react';
 
 interface User {
     id: string;
@@ -284,9 +287,9 @@ export default function UsersPage() {
         );
     };
 
-    if (loading) {
+    if (!loggedInUser && loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex items-center justify-center min-vh-[60vh]">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
             </div>
         );
@@ -316,116 +319,130 @@ export default function UsersPage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Active Roles</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {users.map((u) => (
-                                <tr key={u.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
-                                                {u.full_name.charAt(0)}
+                    {loading ? (
+                        <div className="p-8">
+                            <TableSkeleton rows={limit} columns={4} />
+                        </div>
+                    ) : users.length === 0 ? (
+                        <EmptyState
+                            title={searchQuery ? "No users found" : "No users yet"}
+                            description={searchQuery
+                                ? `No users matched your search for "${searchTerm}"`
+                                : "Start building your community by adding your first user."}
+                            icon={<Users className="h-12 w-12 text-gray-400" />}
+                        />
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50/50 dark:bg-gray-900/50">
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Active Roles</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {users.map((u) => (
+                                    <tr key={u.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+                                                    {u.full_name.charAt(0)}
+                                                </div>
+                                                <div className="flex-1">
+                                                    {editingUserId === u.id ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editName}
+                                                                onChange={(e) => setEditName(e.target.value)}
+                                                                className="px-3 py-1.5 text-sm font-bold bg-white dark:bg-gray-900 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() => handleSaveName(u.id)}
+                                                                disabled={saving}
+                                                                className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                                            >
+                                                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                disabled={saving}
+                                                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{u.full_name}</p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
-                                                {editingUserId === u.id ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={editName}
-                                                            onChange={(e) => setEditName(e.target.value)}
-                                                            className="px-3 py-1.5 text-sm font-bold bg-white dark:bg-gray-900 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            onClick={() => handleSaveName(u.id)}
-                                                            disabled={saving}
-                                                            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
-                                                        >
-                                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                                        </button>
-                                                        <button
-                                                            onClick={handleCancelEdit}
-                                                            disabled={saving}
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{u.full_name}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
-                                                    </>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-wrap gap-1">
+                                                {u.role.map((r, i) => (
+                                                    <span key={i} className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-purple-100/50 dark:border-purple-800/50">
+                                                        {r}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-wrap gap-1 max-w-xs">
+                                                {u.permissions.slice(0, 3).map((p, i) => (
+                                                    <span key={i} className="px-2 py-0.5 text-[9px] bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
+                                                        {p}
+                                                    </span>
+                                                ))}
+                                                {u.permissions.length > 3 && (
+                                                    <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 font-bold">
+                                                        +{u.permissions.length - 3}
+                                                    </span>
                                                 )}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex flex-wrap gap-1">
-                                            {u.role.map((r, i) => (
-                                                <span key={i} className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-purple-100/50 dark:border-purple-800/50">
-                                                    {r}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex flex-wrap gap-1 max-w-xs">
-                                            {u.permissions.slice(0, 3).map((p, i) => (
-                                                <span key={i} className="px-2 py-0.5 text-[9px] bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
-                                                    {p}
-                                                </span>
-                                            ))}
-                                            {u.permissions.length > 3 && (
-                                                <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 font-bold">
-                                                    +{u.permissions.length - 3}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            {canManageAccess && (
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {canManageAccess && (
+                                                    <button
+                                                        onClick={() => handleOpenAccessModal(u)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                        title="Manage Access & Roles"
+                                                    >
+                                                        <Key className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                                {canManageAccess && (
+                                                    <Link
+                                                        href={`/permissions?user=${u.id}`}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                        title="View Direct Matrix"
+                                                    >
+                                                        <Shield className="h-4 w-4" />
+                                                    </Link>
+                                                )}
                                                 <button
-                                                    onClick={() => handleOpenAccessModal(u)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                    title="Manage Access & Roles"
+                                                    onClick={() => handleEditClick(u.id, u.full_name)}
+                                                    disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
+                                                    className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
+                                                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
+                                                        }`}
                                                 >
-                                                    <Key className="h-4 w-4" />
+                                                    <Edit2 className="h-4 w-4" />
                                                 </button>
-                                            )}
-                                            {canManageAccess && (
-                                                <Link
-                                                    href={`/permissions?user=${u.id}`}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                    title="View Direct Matrix"
-                                                >
-                                                    <Shield className="h-4 w-4" />
-                                                </Link>
-                                            )}
-                                            <button
-                                                onClick={() => handleEditClick(u.id, u.full_name)}
-                                                disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
-                                                className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
-                                                    ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                                                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
-                                                    }`}
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 <Pagination

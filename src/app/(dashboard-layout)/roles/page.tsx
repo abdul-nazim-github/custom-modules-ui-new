@@ -22,6 +22,8 @@ import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Role {
     _id: string;
@@ -242,7 +244,7 @@ export default function RolesPage() {
 
     const filteredRoles = roles;
 
-    if (loading) {
+    if (!loggedInUser && loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
@@ -283,72 +285,88 @@ export default function RolesPage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Role Name</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions Count</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredRoles.map((role) => (
-                                <tr key={role._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                                                <Shield className="h-5 w-5" />
-                                            </div>
-                                            <span className="font-bold text-gray-900 dark:text-white capitalize">{role.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-bold">
-                                            {role.permissions?.length || 0} Permissions
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            {role.is_default ? (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                                                    <Lock className="h-3.5 w-3.5 text-gray-400" />
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System Default</span>
+                    {loading ? (
+                        <div className="p-8">
+                            <TableSkeleton rows={limit} columns={4} />
+                        </div>
+                    ) : filteredRoles.length === 0 ? (
+                        <EmptyState
+                            title={searchQuery ? "No roles found" : "No roles yet"}
+                            description={searchQuery
+                                ? `No roles matched your search for "${searchTerm}"`
+                                : "Define access levels by creating your first role."}
+                            icon={<Shield className="h-12 w-12 text-gray-400" />}
+                            action={canCreate ? {
+                                label: "Create Role",
+                                onClick: () => {
+                                    setEditingRole(null);
+                                    setRoleName('');
+                                    setSelectedPermissions([]);
+                                    setIsModalOpen(true);
+                                }
+                            } : undefined}
+                        />
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-50/50 dark:bg-gray-900/50">
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Role Name</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions Count</th>
+                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {filteredRoles.map((role) => (
+                                    <tr key={role._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                                    <Shield className="h-5 w-5" />
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    {canEdit && (
-                                                        <button
-                                                            onClick={() => handleOpenModal(role)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                            title="Edit Role"
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                    {canDelete && (
-                                                        <button
-                                                            onClick={() => openDeleteModal(role._id, role.name)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                                                            title="Delete Role"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredRoles.length === 0 && (
-                                <tr>
-                                    <td colSpan={3} className="px-8 py-12 text-center text-gray-500">
-                                        No roles found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                                <span className="font-bold text-gray-900 dark:text-white capitalize">{role.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-bold">
+                                                {role.permissions?.length || 0} Permissions
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {role.is_default ? (
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                                                        <Lock className="h-3.5 w-3.5 text-gray-400" />
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System Default</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => handleOpenModal(role)}
+                                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                                title="Edit Role"
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        {canDelete && (
+                                                            <button
+                                                                onClick={() => openDeleteModal(role._id, role.name)}
+                                                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
+                                                                title="Delete Role"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 <Pagination
