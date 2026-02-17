@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "10";
+    const search = searchParams.get("search") || "";
 
     const cookieStore = await cookies();
     const accessToken = cookieStore.get('accessToken')?.value;
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
     const queryParams = new URLSearchParams();
     queryParams.append("page", page);
     queryParams.append("limit", limit);
+    if (search) queryParams.append("search", search);
 
     const response = await fetch(`${API_BASE_URL}/api/content/list?${queryParams.toString()}`, {
       method: "GET",

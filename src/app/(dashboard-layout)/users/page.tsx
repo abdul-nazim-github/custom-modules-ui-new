@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import debounce from 'lodash.debounce';
 import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, Grid, Info, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { useAppSelector } from '@/lib/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { useAppDispatch } from '@/lib/hooks';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface User {
     id: string;
@@ -37,6 +39,7 @@ export default function UsersPage() {
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
     const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
@@ -56,6 +59,12 @@ export default function UsersPage() {
     const [updatingAccess, setUpdatingAccess] = useState(false);
     const [customRoleInput, setCustomRoleInput] = useState('');
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
     const hasPermission = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.view');
     const canEdit = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.edit');
     const canManageAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.manage');
@@ -67,15 +76,29 @@ export default function UsersPage() {
         }
     }, [hasPermission, loading, loggedInUser, router, dispatch]);
 
+    const debouncedSearch = useCallback(
+        debounce((query: string) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+        }, 2000),
+        []
+    );
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        debouncedSearch(value);
+    };
+
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [currentPage, limit, searchQuery]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [usersRes, rolesRes, matrixRes] = await Promise.all([
-                fetch('/api/auth/users?page=1&limit=100&sortBy=name&order=asc'),
+                fetch(`/api/auth/users?page=${currentPage}&limit=${limit}&sortBy=name&order=asc${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
                 fetch('/api/roles/list'),
                 fetch('/api/permissions/matrix')
             ]);
@@ -84,7 +107,12 @@ export default function UsersPage() {
             const rolesData = await rolesRes.json();
             const matrixData = await matrixRes.json();
 
-            if (usersData.success && usersData.data) setUsers(usersData.data);
+            if (usersData.success && usersData.data) {
+                setUsers(usersData.data);
+                const total = usersData.meta?.totalCount || usersData.total || usersData.data.length;
+                setTotalItems(total);
+                setTotalPages(usersData.meta?.totalPages || usersData.totalPages || Math.ceil(total / limit));
+            }
             if (rolesData.success) setRoles(rolesData.data);
             if (matrixData.success) setMatrix(matrixData.data);
 
@@ -256,11 +284,6 @@ export default function UsersPage() {
         );
     };
 
-    const filteredUsers = users.filter(u =>
-        u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -286,7 +309,7 @@ export default function UsersPage() {
                             type="text"
                             placeholder="Search by name or email..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
@@ -303,7 +326,7 @@ export default function UsersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredUsers.map((u) => (
+                            {users.map((u) => (
                                 <tr key={u.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
@@ -404,6 +427,18 @@ export default function UsersPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    limit={limit}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                    totalItems={totalItems}
+                />
             </div>
 
             {/* Access Modal */}

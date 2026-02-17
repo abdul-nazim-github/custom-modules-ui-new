@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import debounce from 'lodash.debounce';
 import {
     Shield,
     Plus,
@@ -20,6 +21,7 @@ import {
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface Role {
     _id: string;
@@ -44,6 +46,13 @@ export default function RolesPage() {
     const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     // Modal/Edit state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,15 +79,29 @@ export default function RolesPage() {
         }
     }, [hasPermission, loading, loggedInUser, dispatch]);
 
+    const debouncedSearch = useCallback(
+        debounce((query: string) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+        }, 2000),
+        []
+    );
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        debouncedSearch(value);
+    };
+
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [currentPage, limit, searchQuery]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [rolesRes, matrixRes] = await Promise.all([
-                fetch('/api/roles/list'),
+                fetch(`/api/roles/list?page=${currentPage}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
                 fetch('/api/permissions/matrix')
             ]);
 
@@ -87,6 +110,9 @@ export default function RolesPage() {
 
             if (rolesData.success) {
                 setRoles(rolesData.data);
+                const total = rolesData.meta?.totalCount || rolesData.total || rolesData.data.length;
+                setTotalItems(total);
+                setTotalPages(rolesData.meta?.totalPages || rolesData.totalPages || Math.ceil(total / limit));
             }
             if (matrixData.success) {
                 setMatrix(matrixData.data);
@@ -214,9 +240,7 @@ export default function RolesPage() {
         setIsDeleteModalOpen(true);
     };
 
-    const filteredRoles = roles.filter(r =>
-        r.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRoles = roles;
 
     if (loading) {
         return (
@@ -252,7 +276,7 @@ export default function RolesPage() {
                             type="text"
                             placeholder="Search roles..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
@@ -326,6 +350,18 @@ export default function RolesPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    limit={limit}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                    totalItems={totalItems}
+                />
             </div>
 
             {/* Modal */}

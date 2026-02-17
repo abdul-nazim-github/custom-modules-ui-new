@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import debounce from 'lodash.debounce';
 import { Mail, Search, Eye, Loader2, Calendar, User as UserIcon } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface ContactSubmission {
     _id: string;
@@ -22,7 +24,14 @@ export default function ContactFormPage() {
     const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('contact.view');
 
@@ -33,20 +42,39 @@ export default function ContactFormPage() {
         }
     }, [user, hasAccess, router, dispatch]);
 
-    if (!user) return null;
+    const debouncedSearch = useCallback(
+        debounce((query: string) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+        }, 2000),
+        []
+    );
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        debouncedSearch(value);
+    };
 
     useEffect(() => {
-        fetchSubmissions();
-    }, []);
+        if (user) {
+            fetchSubmissions();
+        }
+    }, [currentPage, limit, user, searchQuery]);
+
+    if (!user) return null;
 
     const fetchSubmissions = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/contact/list?page=1&limit=100');
+            const response = await fetch(`/api/contact/list?page=${currentPage}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
             const result = await response.json();
 
             if (result.success && result.data) {
                 setSubmissions(result.data);
+                const total = result.meta?.totalCount || result.total || result.data.length;
+                setTotalItems(total);
+                setTotalPages(result.meta?.totalPages || result.totalPages || Math.ceil(total / limit));
             } else {
                 dispatch(showToast({ message: 'Failed to load submissions', type: 'error' }));
             }
@@ -57,12 +85,6 @@ export default function ContactFormPage() {
             setLoading(false);
         }
     };
-
-    const filteredSubmissions = submissions.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.subject.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -100,12 +122,12 @@ export default function ContactFormPage() {
                             type="text"
                             placeholder="Search by name, email or subject..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-bold text-gray-900 dark:text-white">{filteredSubmissions.length}</span> submissions
+                        <span className="font-bold text-gray-900 dark:text-white">{totalItems}</span> submissions
                     </div>
                 </div>
 
@@ -120,7 +142,7 @@ export default function ContactFormPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredSubmissions.map((submission) => (
+                            {submissions.map((submission) => (
                                 <tr key={submission._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
@@ -158,6 +180,18 @@ export default function ContactFormPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    limit={limit}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                    totalItems={totalItems}
+                />
             </div>
 
             {/* View Modal */}

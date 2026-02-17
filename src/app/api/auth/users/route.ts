@@ -17,9 +17,21 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') || '100';
     const sortBy = searchParams.get('sortBy') || 'name';
     const order = searchParams.get('order') || 'asc';
+    const search = searchParams.get('search') || '';
+
+    const backendQuery = new URLSearchParams({
+      page,
+      limit,
+      sortBy,
+      order,
+    });
+
+    if (search) {
+      backendQuery.append('search', search);
+    }
 
     const response = await fetch(
-      `${API_BASE_URL}/api/auth/users?page=${page}&limit=${limit}&sortBy=${sortBy}&order=${order}`,
+      `${API_BASE_URL}/api/auth/users?${backendQuery.toString()}`,
       {
         method: 'GET',
         headers: {

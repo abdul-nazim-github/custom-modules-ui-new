@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import debounce from 'lodash.debounce';
 import { Search, Edit2, Trash2, Plus, Loader2, FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface ContentItem {
     id?: string;
@@ -25,11 +27,13 @@ export default function ContentPage() {
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [contentList, setContentList] = useState<ContentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const limit = 10;
+    const [limit, setLimit] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -45,19 +49,34 @@ export default function ContentPage() {
         }
     }, [isSuperAdmin, loading, loggedInUser, router, dispatch]);
 
+    const debouncedSearch = useCallback(
+        debounce((query: string) => {
+            setSearchQuery(query);
+            setPage(1);
+        }, 2000),
+        []
+    );
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        debouncedSearch(value);
+    };
+
     useEffect(() => {
         fetchData();
-    }, [page]);
+    }, [page, limit, searchQuery]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/content/list?page=${page}&limit=${limit}`);
+            const response = await fetch(`/api/content/list?page=${page}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
             const result = await response.json();
 
             if (result.success) {
                 setContentList(result.data || []);
-                setTotalCount(result.meta?.totalCount || 0);
+                setTotalCount(result.meta?.totalCount || result.total || (result.data?.length || 0));
+                setTotalPages(result.meta?.totalPages || result.totalPages || Math.ceil((result.meta?.totalCount || result.total || (result.data?.length || 0)) / limit));
             } else {
                 dispatch(showToast({ message: result.message || 'Failed to load content', type: 'error' }));
             }
@@ -100,10 +119,7 @@ export default function ContentPage() {
         setIsDeleteModalOpen(true);
     };
 
-    const filteredContent = contentList.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.shortDescription.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredContent = contentList;
 
     if (loading && page === 1 && contentList.length === 0) {
         return (
@@ -137,7 +153,7 @@ export default function ContentPage() {
                             type="text"
                             placeholder="Search by title or description..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
@@ -223,29 +239,17 @@ export default function ContentPage() {
                     </table>
                 </div>
 
-                {totalCount > limit && (
-                    <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <p className="text-sm text-gray-500">
-                            Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, totalCount)} of {totalCount} entries
-                        </p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setPage(p => p + 1)}
-                                disabled={page * limit >= totalCount}
-                                className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
-                        </div>
-                    </div>
-                )}
+                <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    limit={limit}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setPage(1);
+                    }}
+                    totalItems={totalCount}
+                />
             </div>
 
             <DeleteConfirmationModal
@@ -256,6 +260,6 @@ export default function ContentPage() {
                 isLoading={isDeleting}
                 message="Are you sure you want to delete this content module? This action will permanently remove it from the system."
             />
-        </div>
+        </div >
     );
 }
