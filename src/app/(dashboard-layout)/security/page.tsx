@@ -1,6 +1,7 @@
 "use client";
 
-import { Shield, Key, Eye, EyeOff, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Shield, Key, Eye, EyeOff, CheckCircle2, AlertTriangle, Loader2, Wand2, Save } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { notFound, useRouter } from 'next/navigation';
@@ -54,6 +55,34 @@ export default function SecurityPage() {
     const passwordsMatch = formData.newPassword === formData.confirmPassword;
     const canSubmit = formData.oldPassword && formData.newPassword && formData.confirmPassword &&
         passwordValidation.isValid && passwordsMatch;
+
+    const generatePassword = () => {
+        const length = 16;
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let retVal = "";
+
+        // Ensure at least one of each requirement
+        retVal += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
+        retVal += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
+        retVal += "0123456789"[Math.floor(Math.random() * 10)];
+        retVal += "!@#$%^&*()_+"[Math.floor(Math.random() * 12)];
+
+        for (let i = 0; i < length - 4; i++) {
+            retVal += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+
+        // Shuffle the string
+        retVal = retVal.split('').sort(() => 0.5 - Math.random()).join('');
+
+        setFormData(prev => ({
+            ...prev,
+            newPassword: retVal,
+            confirmPassword: retVal
+        }));
+        setShowNewPass(true);
+        setShowConfirmPass(true);
+        dispatch(showToast({ message: 'Secure password generated', type: 'success' }));
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({
@@ -164,28 +193,25 @@ export default function SecurityPage() {
                                 placeholder="Enter your new password"
                                 disabled={loading || !canEdit}
                             />
-                            <button
-                                type="button"
-                                onClick={() => setShowNewPass(!showNewPass)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                            >
-                                {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                            </button>
-                        </div>
-
-                        {/* Password Requirements */}
-                        {formData.newPassword && (
-                            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Password Requirements</p>
-                                <div className="space-y-2">
-                                    <PasswordRequirement met={passwordValidation.minLength} text="At least 8 characters" />
-                                    <PasswordRequirement met={passwordValidation.hasUpper} text="One uppercase letter" />
-                                    <PasswordRequirement met={passwordValidation.hasLower} text="One lowercase letter" />
-                                    <PasswordRequirement met={passwordValidation.hasNumber} text="One number" />
-                                    <PasswordRequirement met={passwordValidation.hasSpecial} text="One special character" />
-                                </div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={generatePassword}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
+                                    title="Generate secure password"
+                                    disabled={loading || !canEdit}
+                                >
+                                    <Wand2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPass(!showNewPass)}
+                                    className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                                >
+                                    {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* Confirm Password */}
@@ -228,26 +254,44 @@ export default function SecurityPage() {
                         )}
                     </div>
 
+                    {/* Password Requirements */}
+                    {formData.newPassword && (
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Password Requirements</p>
+                            <div className="space-y-2">
+                                <PasswordRequirement met={passwordValidation.minLength} text="At least 8 characters" />
+                                <PasswordRequirement met={passwordValidation.hasUpper} text="One uppercase letter" />
+                                <PasswordRequirement met={passwordValidation.hasLower} text="One lowercase letter" />
+                                <PasswordRequirement met={passwordValidation.hasNumber} text="One number" />
+                                <PasswordRequirement met={passwordValidation.hasSpecial} text="One special character" />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Submit Button */}
-                    <div className="pt-4">
-                        <button
-                            type="submit"
-                            disabled={!canSubmit || loading || !canEdit}
-                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                    Changing Password...
-                                </>
-                            ) : (
-                                <>
-                                    <Key className="h-5 w-5" />
-                                    Change Password
-                                </>
-                            )}
-                        </button>
-                    </div>
+                    <Tooltip
+                        content={!canEdit ? "You do not have permission to change password" : ""}
+                    >
+                        <div className={`pt-4 ${!canEdit ? 'cursor-not-allowed w-full' : 'w-full'}`}>
+                            <button
+                                type="submit"
+                                disabled={!canSubmit || loading || !canEdit}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Updating Password...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="h-5 w-5" />
+                                        Update Password
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </Tooltip>
                 </form>
             </div>
 

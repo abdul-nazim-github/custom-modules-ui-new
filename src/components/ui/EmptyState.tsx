@@ -1,5 +1,6 @@
 import React from 'react';
 import { SearchX, Plus } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 interface EmptyStateProps {
     title: string;
@@ -8,6 +9,8 @@ interface EmptyStateProps {
     action?: {
         label: string;
         onClick: () => void;
+        disabled?: boolean;
+        tooltip?: string;
     };
 }
 
@@ -27,13 +30,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 {description}
             </p>
             {action && (
-                <button
-                    onClick={action.onClick}
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
-                >
-                    <Plus className="h-4 w-4" />
-                    {action.label}
-                </button>
+                <Tooltip content={action.tooltip || ''}>
+                    <div className={action.disabled ? "cursor-not-allowed w-fit" : "w-fit"}>
+                        <button
+                            onClick={action.onClick}
+                            disabled={action.disabled}
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:grayscale-[0.5]"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {action.label}
+                        </button>
+                    </div>
+                </Tooltip>
             )}
         </div>
     );

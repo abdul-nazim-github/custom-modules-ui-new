@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
-import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, Grid, Info, ChevronDown, ChevronUp, Lock } from 'lucide-react';
-import { useAppSelector } from '@/lib/hooks';
+import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
-import { useAppDispatch } from '@/lib/hooks';
 import { Pagination } from '@/components/ui/Pagination';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { UserPlus } from 'lucide-react';
 
 interface User {
     id: string;
@@ -408,34 +407,41 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex justify-end gap-2">
-                                                {canManageAccess && (
-                                                    <button
-                                                        onClick={() => handleOpenAccessModal(u)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                        title="Manage Access & Roles"
-                                                    >
-                                                        <Key className="h-4 w-4" />
-                                                    </button>
-                                                )}
-                                                {canManageAccess && (
-                                                    <Link
-                                                        href={`/permissions?user=${u.id}`}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                        title="View Direct Matrix"
-                                                    >
-                                                        <Shield className="h-4 w-4" />
-                                                    </Link>
-                                                )}
-                                                <button
-                                                    onClick={() => handleEditClick(u.id, u.full_name)}
-                                                    disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
-                                                    className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
-                                                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                                                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
-                                                        }`}
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </button>
+                                                <Tooltip content={!canManageAccess ? "You do not have permission to manage access" : "Manage Access & Roles"}>
+                                                    <div className={!canManageAccess ? "cursor-not-allowed" : ""}>
+                                                        <button
+                                                            onClick={() => handleOpenAccessModal(u)}
+                                                            disabled={!canManageAccess}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                                        >
+                                                            <Key className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </Tooltip>
+                                                <Tooltip content={!canManageAccess ? "You do not have permission to view matrix" : "View Direct Matrix"}>
+                                                    <div className={!canManageAccess ? "cursor-not-allowed" : ""}>
+                                                        <Link
+                                                            href={canManageAccess ? `/permissions?user=${u.id}` : '#'}
+                                                            className={`p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center justify-center ${!canManageAccess ? 'opacity-30 pointer-events-none' : 'cursor-pointer'}`}
+                                                        >
+                                                            <Shield className="h-4 w-4" />
+                                                        </Link>
+                                                    </div>
+                                                </Tooltip>
+                                                <Tooltip content={!canEdit ? "You do not have permission to edit users" : "Edit Name"}>
+                                                    <div className={(!canEdit || u.id === loggedInUser?.id) ? "cursor-not-allowed" : ""}>
+                                                        <button
+                                                            onClick={() => handleEditClick(u.id, u.full_name)}
+                                                            disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
+                                                            className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
+                                                                ? 'text-gray-300 dark:text-gray-600 pointer-events-none'
+                                                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
+                                                                }`}
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </Tooltip>
                                             </div>
                                         </td>
                                     </tr>
@@ -593,14 +599,18 @@ export default function UsersPage() {
                             <button onClick={() => setIsAccessModalOpen(false)} className="px-6 py-3 font-bold text-gray-500 cursor-pointer">
                                 Cancel
                             </button>
-                            <button
-                                onClick={handleUpdateAccess}
-                                disabled={updatingAccess}
-                                className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50"
-                            >
-                                {updatingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                Save Access Changes
-                            </button>
+                            <Tooltip content={!canManageAccess ? "You do not have permission to manage access" : ""}>
+                                <div className={!canManageAccess ? "cursor-not-allowed" : ""}>
+                                    <button
+                                        onClick={handleUpdateAccess}
+                                        disabled={updatingAccess || !canManageAccess}
+                                        className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                    >
+                                        {updatingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                        Save Access Changes
+                                    </button>
+                                </div>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>

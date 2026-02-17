@@ -6,6 +6,7 @@ import { notFound, useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { updateUser } from '@/lib/features/auth/authSlice';
 import { User, Mail, Shield, Calendar, Edit2, Camera, Loader2, Save, X } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 export default function ProfilePage() {
     const { user } = useAppSelector((state) => state.auth);
@@ -84,35 +85,40 @@ export default function ProfilePage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Profile Settings</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your public profile and account information.</p>
                 </div>
-                {canEdit && (
-                    isEditing ? (
-                        <div className="flex gap-3">
+                <Tooltip
+                    content={!canEdit ? "You do not have permission to edit profile" : ""}
+                >
+                    <div className={!canEdit ? "cursor-not-allowed" : ""}>
+                        {isEditing ? (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading || !canEdit}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                                >
+                                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        ) : (
                             <button
-                                onClick={() => setIsEditing(false)}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                                onClick={() => setIsEditing(true)}
+                                disabled={!canEdit}
+                                className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${!canEdit ? 'grayscale-[0.5]' : ''}`}
                             >
-                                <X className="h-4 w-4" />
-                                Cancel
+                                <Edit2 className="h-4 w-4" />
+                                Edit Profile
                             </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
-                            >
-                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                Save Changes
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
-                        >
-                            <Edit2 className="h-4 w-4" />
-                            Edit Profile
-                        </button>
-                    )
-                )}
+                        )}
+                    </div>
+                </Tooltip>
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">

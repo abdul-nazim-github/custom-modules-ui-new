@@ -11,13 +11,14 @@ import {
     Save,
     X,
     Loader2,
+    Check,
     CheckCircle2,
-    Grid,
     Info,
     ChevronDown,
     ChevronUp,
     Lock
 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip'; // Added Tooltip import
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
@@ -103,7 +104,7 @@ export default function RolesPage() {
         try {
             setLoading(true);
             const [rolesRes, matrixRes] = await Promise.all([
-                fetch(`/api/roles/list?page=${currentPage}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
+                fetch(`/ api / roles / list ? page = ${currentPage}& limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''} `),
                 fetch('/api/permissions/matrix')
             ]);
 
@@ -176,7 +177,7 @@ export default function RolesPage() {
         try {
             setSaving(true);
             const url = editingRole
-                ? `/api/roles/update/${editingRole._id}`
+                ? `/ api / roles / update / ${editingRole._id} `
                 : '/api/roles/create';
 
             const method = editingRole ? 'PUT' : 'POST';
@@ -215,7 +216,7 @@ export default function RolesPage() {
 
         try {
             setIsDeleting(true);
-            const response = await fetch(`/api/roles/delete/${itemToDelete.id}`, {
+            const response = await fetch(`/ api / roles / delete/${itemToDelete.id}`, {
                 method: 'DELETE',
             });
 
@@ -259,15 +260,20 @@ export default function RolesPage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Role Management</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Define and manage system roles and their default permissions.</p>
                 </div>
-                {canCreate && (
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Create New Role
-                    </button>
-                )}
+                <Tooltip
+                    content={!canCreate ? "You do not have permission to create roles" : ""}
+                >
+                    <div className={!canCreate ? "cursor-not-allowed w-fit" : "w-fit"}>
+                        <button
+                            onClick={() => handleOpenModal()}
+                            disabled={!canCreate}
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                        >
+                            <Plus className="h-5 w-5" />
+                            Create New Role
+                        </button>
+                    </div>
+                </Tooltip>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -296,15 +302,17 @@ export default function RolesPage() {
                                 ? `No roles matched your search for "${searchTerm}"`
                                 : "Define access levels by creating your first role."}
                             icon={<Shield className="h-12 w-12 text-gray-400" />}
-                            action={canCreate ? {
+                            action={{
                                 label: "Create Role",
                                 onClick: () => {
                                     setEditingRole(null);
                                     setRoleName('');
                                     setSelectedPermissions([]);
                                     setIsModalOpen(true);
-                                }
-                            } : undefined}
+                                },
+                                disabled: !canCreate,
+                                tooltip: !canCreate ? "You do not have permission to create roles" : ""
+                            }}
                         />
                     ) : (
                         <table className="w-full text-left">
@@ -333,33 +341,38 @@ export default function RolesPage() {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex justify-end gap-2">
-                                                {role.is_default ? (
+                                                {role.is_default && (
                                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                                                         <Lock className="h-3.5 w-3.5 text-gray-400" />
                                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System Default</span>
                                                     </div>
-                                                ) : (
-                                                    <>
-                                                        {canEdit && (
-                                                            <button
-                                                                onClick={() => handleOpenModal(role)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                                title="Edit Role"
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </button>
-                                                        )}
-                                                        {canDelete && (
-                                                            <button
-                                                                onClick={() => openDeleteModal(role._id, role.name)}
-                                                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                                                                title="Delete Role"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        )}
-                                                    </>
                                                 )}
+                                                <Tooltip
+                                                    content={!canEdit ? "You do not have permission to edit roles" : "Edit Role"}
+                                                >
+                                                    <div className={(!canEdit || role.is_default) ? "cursor-not-allowed" : ""}>
+                                                        <button
+                                                            onClick={() => handleOpenModal(role)}
+                                                            disabled={!canEdit || role.is_default}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </Tooltip>
+                                                <Tooltip
+                                                    content={!canDelete ? "You do not have permission to delete roles" : "Delete Role"}
+                                                >
+                                                    <div className={(!canDelete || role.is_default) ? "cursor-not-allowed" : ""}>
+                                                        <button
+                                                            onClick={() => openDeleteModal(role._id, role.name)}
+                                                            disabled={!canDelete || role.is_default}
+                                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </Tooltip>
                                             </div>
                                         </td>
                                     </tr>
@@ -507,14 +520,20 @@ export default function RolesPage() {
                                 >
                                     Cancel
                                 </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50"
+                                <Tooltip
+                                    content={editingRole ? (!canEdit ? "You do not have permission to edit roles" : "") : (!canCreate ? "You do not have permission to create roles" : "")}
                                 >
-                                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    {saving ? 'Saving...' : 'Save Role Configuration'}
-                                </button>
+                                    <div className={(editingRole ? !canEdit : !canCreate) ? "cursor-not-allowed" : ""}>
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={saving || (editingRole ? !canEdit : !canCreate)}
+                                            className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                        >
+                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                            {saving ? 'Saving...' : 'Save Role Configuration'}
+                                        </button>
+                                    </div>
+                                </Tooltip>
                             </div>
                         </div>
                     </div>

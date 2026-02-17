@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
 import { Search, Edit2, Trash2, Plus, Loader2, FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -138,13 +139,19 @@ export default function ContentPage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Content Management</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Create and manage content modules for the application.</p>
                 </div>
-                <Link
-                    href="/content/create"
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 w-fit"
+                <Tooltip
+                    content={!isSuperAdmin ? "You do not have permission to create content" : ""}
                 >
-                    <Plus className="h-5 w-5" />
-                    Create New Content
-                </Link>
+                    <div className={!isSuperAdmin ? "cursor-not-allowed w-fit" : "w-fit"}>
+                        <Link
+                            href={isSuperAdmin ? "/content/create" : "#"}
+                            className={`flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 w-fit ${!isSuperAdmin ? 'opacity-50 pointer-events-none grayscale-[0.5]' : 'cursor-pointer'}`}
+                        >
+                            <Plus className="h-5 w-5" />
+                            Create New Content
+                        </Link>
+                    </div>
+                </Tooltip>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -173,10 +180,12 @@ export default function ContentPage() {
                                 ? `No content modules matched your search for "${searchTerm}"`
                                 : "Start creating and managing your website's content modules."}
                             icon={<FileText className="h-12 w-12 text-gray-400" />}
-                            action={isSuperAdmin ? {
+                            action={{
                                 label: "Add Content",
-                                onClick: () => router.push('/content/create')
-                            } : undefined}
+                                onClick: () => router.push('/content/create'),
+                                disabled: !isSuperAdmin,
+                                tooltip: !isSuperAdmin ? "You do not have permission to create content" : ""
+                            }}
                         />
                     ) : (
                         <table className="w-full text-left">
@@ -227,27 +236,39 @@ export default function ContentPage() {
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <Link
-                                                            href={`/content/view/${contentId}`}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                                            title="View Content"
+                                                        <Tooltip content="View Content">
+                                                            <Link
+                                                                href={`/content/view/${contentId}`}
+                                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </Link>
+                                                        </Tooltip>
+                                                        <Tooltip
+                                                            content={!isSuperAdmin ? "You do not have permission to edit content" : "Edit Content"}
                                                         >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Link>
-                                                        <Link
-                                                            href={`/content/edit/${contentId}`}
-                                                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
-                                                            title="Edit Content"
+                                                            <div className={!isSuperAdmin ? "cursor-not-allowed" : ""}>
+                                                                <Link
+                                                                    href={isSuperAdmin ? `/content/edit/${contentId}` : "#"}
+                                                                    className={`p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors flex items-center justify-center ${!isSuperAdmin ? 'opacity-30 pointer-events-none' : 'cursor-pointer'}`}
+                                                                >
+                                                                    <Edit2 className="h-4 w-4" />
+                                                                </Link>
+                                                            </div>
+                                                        </Tooltip>
+                                                        <Tooltip
+                                                            content={!isSuperAdmin ? "You do not have permission to delete content" : "Delete Content"}
                                                         >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Link>
-                                                        <button
-                                                            onClick={() => contentId && openDeleteModal(contentId, item.title)}
-                                                            className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors cursor-pointer"
-                                                            title="Delete Content"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                            <div className={!isSuperAdmin ? "cursor-not-allowed" : ""}>
+                                                                <button
+                                                                    onClick={() => contentId && openDeleteModal(contentId, item.title)}
+                                                                    disabled={!isSuperAdmin}
+                                                                    className="p-2 text-red-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </Tooltip>
                                                     </div>
                                                 </td>
                                             </tr>
