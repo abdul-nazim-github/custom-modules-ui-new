@@ -35,14 +35,15 @@ function PermissionsContent() {
     const [permissions, setPermissions] = useState<string[]>([]);
     const [initialPermissions, setInitialPermissions] = useState<string[]>([]);
 
-    const hasAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.role?.includes('admin');
+    const hasPermission = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('permissions.view');
+    const canEdit = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('permissions.edit');
 
     useEffect(() => {
-        if (!loading && !hasAccess && loggedInUser) {
+        if (!loading && !hasPermission && loggedInUser) {
             router.push('/dashboard');
-            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+            dispatch(showToast({ message: 'You do not have permission to access Direct Matrix', type: 'error' }));
         }
-    }, [hasAccess, loading, router, dispatch, loggedInUser]);
+    }, [hasPermission, loading, router, dispatch, loggedInUser]);
 
     useEffect(() => {
         if (!userId) {
@@ -118,6 +119,10 @@ function PermissionsContent() {
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            dispatch(showToast({ message: 'You do not have permission to edit permissions', type: 'error' }));
+            return;
+        }
         try {
             setSaving(true);
             const response = await fetch(`/api/permissions/update/${userId}`, {
@@ -148,7 +153,7 @@ function PermissionsContent() {
     };
 
     const hasChanges = JSON.stringify(permissions.sort()) !== JSON.stringify(initialPermissions.sort());
-    const canSave = hasChanges && !isEditingSelf;
+    const canSave = hasChanges && !isEditingSelf && canEdit;
 
     if (loading) {
         return (
@@ -241,8 +246,8 @@ function PermissionsContent() {
                                                 key={perm}
                                                 onClick={() => togglePermission(perm)}
                                                 className={`p-4 rounded-2xl border-2 transition-all group ${isSelected
-                                                        ? 'border-blue-600 bg-white dark:bg-gray-800'
-                                                        : 'border-transparent bg-white/50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700'
+                                                    ? 'border-blue-600 bg-white dark:bg-gray-800'
+                                                    : 'border-transparent bg-white/50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700'
                                                     } ${isEditingSelf ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                                             >
                                                 <div className="flex items-center justify-between">
@@ -250,8 +255,8 @@ function PermissionsContent() {
                                                         {action.replace(/\./g, ' ')}
                                                     </span>
                                                     <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
-                                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                                            : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'
+                                                        ? 'border-blue-600 bg-blue-600 text-white'
+                                                        : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'
                                                         }`}>
                                                         {isSelected && <CheckCircle2 className="h-3 w-3" />}
                                                     </div>

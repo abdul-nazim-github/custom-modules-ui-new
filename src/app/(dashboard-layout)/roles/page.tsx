@@ -52,7 +52,17 @@ export default function RolesPage() {
     const [saving, setSaving] = useState(false);
     const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
-    const isSuperAdmin = loggedInUser?.role?.includes('super_admin');
+    const hasPermission = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.view');
+    const canCreate = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.create');
+    const canEdit = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.edit');
+    const canDelete = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.delete');
+
+    useEffect(() => {
+        if (!loading && !hasPermission && loggedInUser) {
+            dispatch(showToast({ message: 'You do not have permission to access Role Management', type: 'error' }));
+            // Redirect or hide content
+        }
+    }, [hasPermission, loading, loggedInUser, dispatch]);
 
     useEffect(() => {
         fetchData();
@@ -120,6 +130,10 @@ export default function RolesPage() {
     };
 
     const handleSave = async () => {
+        if (editingRole ? !canEdit : !canCreate) {
+            dispatch(showToast({ message: `You do not have permission to ${editingRole ? 'edit' : 'create'} roles`, type: 'error' }));
+            return;
+        }
         if (!roleName.trim()) {
             dispatch(showToast({ message: 'Role name is required', type: 'error' }));
             return;
@@ -163,6 +177,10 @@ export default function RolesPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (!canDelete) {
+            dispatch(showToast({ message: 'You do not have permission to delete roles', type: 'error' }));
+            return;
+        }
         if (!confirm('Are you sure you want to delete this role?')) return;
 
         try {
@@ -203,13 +221,15 @@ export default function RolesPage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Role Management</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Define and manage system roles and their default permissions.</p>
                 </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
-                >
-                    <Plus className="h-5 w-5" />
-                    Create New Role
-                </button>
+                {canCreate && (
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Create New Role
+                    </button>
+                )}
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -260,20 +280,24 @@ export default function RolesPage() {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <button
-                                                        onClick={() => handleOpenModal(role)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                        title="Edit Role"
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(role._id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                                                        title="Delete Role"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                                    {canEdit && (
+                                                        <button
+                                                            onClick={() => handleOpenModal(role)}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                            title="Edit Role"
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={() => handleDelete(role._id)}
+                                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
+                                                            title="Delete Role"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </>
                                             )}
                                         </div>

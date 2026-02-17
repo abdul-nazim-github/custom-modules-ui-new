@@ -22,6 +22,7 @@ export default function SecurityPage() {
     });
 
     const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('security.view');
+    const canEdit = user?.role?.includes('super_admin') || user?.permissions?.includes('security.edit');
 
     useEffect(() => {
         if (user && !hasPermission) {
@@ -63,6 +64,11 @@ export default function SecurityPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!canEdit) {
+            dispatch(showToast({ message: 'You do not have permission to change password', type: 'error' }));
+            return;
+        }
 
         if (!canSubmit) {
             dispatch(showToast({ message: 'Please fill all fields correctly', type: 'error' }));
@@ -131,7 +137,7 @@ export default function SecurityPage() {
                                 onChange={handleChange}
                                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
                                 placeholder="Enter your current password"
-                                disabled={loading}
+                                disabled={loading || !canEdit}
                             />
                             <button
                                 type="button"
@@ -156,7 +162,7 @@ export default function SecurityPage() {
                                 onChange={handleChange}
                                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
                                 placeholder="Enter your new password"
-                                disabled={loading}
+                                disabled={loading || !canEdit}
                             />
                             <button
                                 type="button"
@@ -195,7 +201,7 @@ export default function SecurityPage() {
                                 onChange={handleChange}
                                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-12"
                                 placeholder="Confirm your new password"
-                                disabled={loading}
+                                disabled={loading || !canEdit}
                             />
                             <button
                                 type="button"
@@ -226,7 +232,7 @@ export default function SecurityPage() {
                     <div className="pt-4">
                         <button
                             type="submit"
-                            disabled={!canSubmit || loading}
+                            disabled={!canSubmit || loading || !canEdit}
                             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (

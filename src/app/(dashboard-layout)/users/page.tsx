@@ -56,15 +56,16 @@ export default function UsersPage() {
     const [updatingAccess, setUpdatingAccess] = useState(false);
     const [customRoleInput, setCustomRoleInput] = useState('');
 
-    const hasAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.role?.includes('admin');
-    const canManagePermissions = hasAccess;
+    const hasPermission = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.view');
+    const canEdit = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.edit');
+    const canManageAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('users.manage');
 
     useEffect(() => {
-        if (!loading && !hasAccess && loggedInUser) {
+        if (!loading && !hasPermission && loggedInUser) {
             router.push('/dashboard');
-            dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
+            dispatch(showToast({ message: 'You do not have permission to access User Directory', type: 'error' }));
         }
-    }, [hasAccess, loading, loggedInUser, router, dispatch]);
+    }, [hasPermission, loading, loggedInUser, router, dispatch]);
 
     useEffect(() => {
         fetchData();
@@ -110,6 +111,10 @@ export default function UsersPage() {
     };
 
     const handleSaveName = async (userId: string) => {
+        if (!canEdit) {
+            dispatch(showToast({ message: 'You do not have permission to edit users', type: 'error' }));
+            return;
+        }
         if (!editName.trim()) {
             dispatch(showToast({ message: 'Name cannot be empty', type: 'error' }));
             return;
@@ -155,6 +160,10 @@ export default function UsersPage() {
 
     const handleUpdateAccess = async () => {
         if (!targetUser) return;
+        if (!canManageAccess) {
+            dispatch(showToast({ message: 'You do not have permission to manage access', type: 'error' }));
+            return;
+        }
 
         try {
             setUpdatingAccess(true);
@@ -360,7 +369,7 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            {canManagePermissions && (
+                                            {canManageAccess && (
                                                 <button
                                                     onClick={() => handleOpenAccessModal(u)}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
@@ -369,17 +378,19 @@ export default function UsersPage() {
                                                     <Key className="h-4 w-4" />
                                                 </button>
                                             )}
-                                            <Link
-                                                href={`/permissions?user=${u.id}`}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                title="View Direct Matrix"
-                                            >
-                                                <Shield className="h-4 w-4" />
-                                            </Link>
+                                            {canManageAccess && (
+                                                <Link
+                                                    href={`/permissions?user=${u.id}`}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                    title="View Direct Matrix"
+                                                >
+                                                    <Shield className="h-4 w-4" />
+                                                </Link>
+                                            )}
                                             <button
                                                 onClick={() => handleEditClick(u.id, u.full_name)}
-                                                disabled={u.id === loggedInUser?.id || editingUserId !== null}
-                                                className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id
+                                                disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
+                                                className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
                                                     ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                                                     : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
                                                     }`}

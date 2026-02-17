@@ -19,6 +19,7 @@ export default function ProfilePage() {
     });
 
     const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('profile.view') || user?.permissions?.includes('profile.tab');
+    const canEdit = user?.role?.includes('super_admin') || user?.permissions?.includes('profile.edit');
 
     useEffect(() => {
         if (user) {
@@ -38,6 +39,10 @@ export default function ProfilePage() {
     }, [user, hasPermission, router, dispatch]);
 
     const handleSave = async () => {
+        if (!canEdit) {
+            dispatch(showToast({ message: 'You do not have permission to edit profile', type: 'error' }));
+            return;
+        }
         try {
             setLoading(true);
             const response = await fetch('/api/auth/profile/edit', {
@@ -79,32 +84,34 @@ export default function ProfilePage() {
                     <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Profile Settings</h1>
                     <p className="mt-2 text-gray-500 dark:text-gray-400">Manage your public profile and account information.</p>
                 </div>
-                {isEditing ? (
-                    <div className="flex gap-3">
+                {canEdit && (
+                    isEditing ? (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                            >
+                                <X className="h-4 w-4" />
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={loading}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save Changes
+                            </button>
+                        </div>
+                    ) : (
                         <button
-                            onClick={() => setIsEditing(false)}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                            onClick={() => setIsEditing(true)}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
                         >
-                            <X className="h-4 w-4" />
-                            Cancel
+                            <Edit2 className="h-4 w-4" />
+                            Edit Profile
                         </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={loading}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
-                        >
-                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Save Changes
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer"
-                    >
-                        <Edit2 className="h-4 w-4" />
-                        Edit Profile
-                    </button>
+                    )
                 )}
             </div>
 
