@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { showToast } from '@/lib/features/toast/toastSlice';
+import { DeleteConfirmationModal } from '@/components/ui/delete-confirmation-modal';
 
 interface Role {
     _id: string;
@@ -51,6 +52,11 @@ export default function RolesPage() {
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
     const [expandedModule, setExpandedModule] = useState<string | null>(null);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const hasPermission = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.view');
     const canCreate = loggedInUser?.role?.includes('super_admin') || loggedInUser?.permissions?.includes('roles.create');
@@ -176,15 +182,12 @@ export default function RolesPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!canDelete) {
-            dispatch(showToast({ message: 'You do not have permission to delete roles', type: 'error' }));
-            return;
-        }
-        if (!confirm('Are you sure you want to delete this role?')) return;
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
 
         try {
-            const response = await fetch(`/api/roles/delete/${id}`, {
+            setIsDeleting(true);
+            const response = await fetch(`/api/roles/delete/${itemToDelete.id}`, {
                 method: 'DELETE',
             });
 
@@ -192,6 +195,8 @@ export default function RolesPage() {
 
             if (result.success) {
                 dispatch(showToast({ message: 'Role deleted successfully', type: 'success' }));
+                setIsDeleteModalOpen(false);
+                setItemToDelete(null);
                 fetchData();
             } else {
                 dispatch(showToast({ message: result.message || 'Delete failed', type: 'error' }));
@@ -199,7 +204,14 @@ export default function RolesPage() {
         } catch (error) {
             console.error('Error deleting role:', error);
             dispatch(showToast({ message: 'Error deleting role', type: 'error' }));
+        } finally {
+            setIsDeleting(false);
         }
+    };
+
+    const openDeleteModal = (id: string, name: string) => {
+        setItemToDelete({ id, name });
+        setIsDeleteModalOpen(true);
     };
 
     const filteredRoles = roles.filter(r =>
@@ -291,7 +303,7 @@ export default function RolesPage() {
                                                     )}
                                                     {canDelete && (
                                                         <button
-                                                            onClick={() => handleDelete(role._id)}
+                                                            onClick={() => openDeleteModal(role._id, role.name)}
                                                             className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
                                                             title="Delete Role"
                                                         >
@@ -454,6 +466,15 @@ export default function RolesPage() {
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+                onConfirm={handleDelete}
+                itemName={itemToDelete?.name}
+                isLoading={isDeleting}
+                message="Are you sure you want to delete this role? This will affecting all users currently assigned to it."
+            />
         </div>
     );
 }

@@ -12,7 +12,8 @@ import {
     Lock,
     LogOut,
     ChevronRight,
-    Mail
+    Mail,
+    FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
@@ -83,6 +84,12 @@ export default function Sidebar({ className }: SidebarProps) {
             href: '/permissions',
             icon: Lock,
             show: isSuperAdmin || user?.permissions?.includes('permissions.view')
+        },
+        {
+            name: 'Content',
+            href: '/content',
+            icon: FileText,
+            show: isSuperAdmin
         },
         {
             name: 'Contact Submissions',
