@@ -18,7 +18,7 @@ export default function ProfilePage() {
         last_name: ''
     });
 
-    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~profile');
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('profile.view') || user?.permissions?.includes('profile.tab');
 
     useEffect(() => {
         if (user) {
@@ -124,7 +124,7 @@ export default function ProfilePage() {
                             <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white text-center">
                                 {isEditing ? `${formData.first_name} ${formData.last_name}` : user.full_name}
                             </h2>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mt-1">{user.role[0]}</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mt-1">{user.role.join(', ')}</p>
                         </div>
 
                         <div className="mt-10 space-y-4">
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Role</label>
                                 <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl font-medium">
                                     <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-bold uppercase tracking-wider">
-                                        {user.role[0]}
+                                        {user.role.join(', ')}
                                     </span>
                                 </div>
                             </div>

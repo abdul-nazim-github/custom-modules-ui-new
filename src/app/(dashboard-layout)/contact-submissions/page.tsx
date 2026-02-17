@@ -24,7 +24,7 @@ export default function ContactFormPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
 
-    const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~contact_form');
+    const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('contact.view');
 
     useEffect(() => {
         if (user && !hasAccess) {

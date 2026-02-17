@@ -13,7 +13,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const [theme, setTheme] = useState('system');
 
-    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~settings');
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('settings.view');
 
     useEffect(() => {
         if (user && !hasPermission) {

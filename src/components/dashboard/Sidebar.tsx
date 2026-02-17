@@ -43,25 +43,25 @@ export default function Sidebar({ className }: SidebarProps) {
             name: 'Profile',
             href: '/profile',
             icon: User,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~profile')
+            show: isSuperAdmin || user?.permissions?.includes('profile.view') || user?.permissions?.includes('profile.tab')
         },
         {
             name: 'Activity',
             href: '/activity',
             icon: Activity,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~activity')
+            show: isSuperAdmin || user?.permissions?.includes('activity.view')
         },
         {
             name: 'Settings',
             href: '/settings',
             icon: Settings,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~settings')
+            show: isSuperAdmin || user?.permissions?.includes('settings.view')
         },
         {
             name: 'Security',
             href: '/security',
             icon: Shield,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~security')
+            show: isSuperAdmin || user?.permissions?.includes('security.view')
         }
     ];
 
@@ -70,19 +70,25 @@ export default function Sidebar({ className }: SidebarProps) {
             name: 'Users',
             href: '/users',
             icon: Users,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~manage_users')
+            show: isSuperAdmin || user?.permissions?.includes('users.view')
+        },
+        {
+            name: 'Roles',
+            href: '/roles',
+            icon: Shield,
+            show: isSuperAdmin || user?.permissions?.includes('roles.view')
         },
         {
             name: 'Permissions',
             href: '/permissions',
             icon: Lock,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~manage_permissions')
+            show: isSuperAdmin || user?.permissions?.includes('permissions.view')
         },
         {
             name: 'Contact Submissions',
             href: '/contact-submissions',
             icon: Mail,
-            show: isSuperAdmin || user?.permissions?.includes('modules~permission~contact_form')
+            show: isSuperAdmin || user?.permissions?.includes('contact.view')
         }
     ];
 
@@ -183,7 +189,7 @@ export default function Sidebar({ className }: SidebarProps) {
                             {user?.full_name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
-                            {user?.role?.[0]}
+                            {user?.role?.join(', ')}
                         </p>
                     </div>
                 </div>

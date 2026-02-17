@@ -11,7 +11,7 @@ export default function ActivityPage() {
     const dispatch = useAppDispatch();
     const router = useRouter();
 
-    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~activity');
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('activity.view');
 
     useEffect(() => {
         if (user && !hasPermission) {

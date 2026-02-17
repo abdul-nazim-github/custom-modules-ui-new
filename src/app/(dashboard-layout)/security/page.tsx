@@ -21,7 +21,7 @@ export default function SecurityPage() {
         confirmPassword: ''
     });
 
-    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~security');
+    const hasPermission = user?.role?.includes('super_admin') || user?.permissions?.includes('security.view');
 
     useEffect(() => {
         if (user && !hasPermission) {

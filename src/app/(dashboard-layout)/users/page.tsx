@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Filter, Edit2, Shield, UserPlus, Save, X, Loader2 } from 'lucide-react';
+import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, Grid, Info, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { useAppSelector } from '@/lib/hooks';
 import Link from 'next/link';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { showToast } from '@/lib/features/toast/toastSlice';
 import { useAppDispatch } from '@/lib/hooks';
 
@@ -17,52 +17,86 @@ interface User {
     created_at: string;
 }
 
+interface Role {
+    _id: string;
+    name: string;
+    permissions: string[];
+    is_default?: boolean;
+}
+
+interface PermissionMatrix {
+    modules: string[];
+    actions: string[];
+    permissions: string[];
+}
+
 export default function UsersPage() {
     const router = useRouter();
-    const { user } = useAppSelector((state) => state.auth);
+    const { user: loggedInUser } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
+
+    // UI State
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
     const [loading, setLoading] = useState(true);
+
+    // Edit Name State
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [saving, setSaving] = useState(false);
 
-    const hasAccess = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_users');
-    const canManagePermissions = user?.role?.includes('super_admin') || user?.permissions?.includes('modules~permission~manage_permissions');
+    // Access Modal State
+    const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+    const [targetUser, setTargetUser] = useState<User | null>(null);
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+    const [customPermissions, setCustomPermissions] = useState<string[]>([]);
+    const [expandedModule, setExpandedModule] = useState<string | null>(null);
+    const [updatingAccess, setUpdatingAccess] = useState(false);
+    const [customRoleInput, setCustomRoleInput] = useState('');
+
+    const hasAccess = loggedInUser?.role?.includes('super_admin') || loggedInUser?.role?.includes('admin');
+    const canManagePermissions = hasAccess;
 
     useEffect(() => {
-        if (!loading && !hasAccess && user) {
+        if (!loading && !hasAccess && loggedInUser) {
             router.push('/dashboard');
             dispatch(showToast({ message: 'You do not have permission to access this page', type: 'error' }));
         }
-    }, [hasAccess, loading, user, router, dispatch]);
+    }, [hasAccess, loading, loggedInUser, router, dispatch]);
 
     useEffect(() => {
-        fetchUsers();
+        fetchData();
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/auth/users?page=1&limit=100&sortBy=name&order=asc');
-            const result = await response.json();
+            const [usersRes, rolesRes, matrixRes] = await Promise.all([
+                fetch('/api/auth/users?page=1&limit=100&sortBy=name&order=asc'),
+                fetch('/api/roles/list'),
+                fetch('/api/permissions/matrix')
+            ]);
 
-            if (result.success && result.data) {
-                setUsers(result.data);
-            } else {
-                dispatch(showToast({ message: 'Failed to load users', type: 'error' }));
-            }
+            const usersData = await usersRes.json();
+            const rolesData = await rolesRes.json();
+            const matrixData = await matrixRes.json();
+
+            if (usersData.success && usersData.data) setUsers(usersData.data);
+            if (rolesData.success) setRoles(rolesData.data);
+            if (matrixData.success) setMatrix(matrixData.data);
+
         } catch (error) {
-            console.error('Error fetching users:', error);
-            dispatch(showToast({ message: 'Error loading users', type: 'error' }));
+            console.error('Error fetching data:', error);
+            dispatch(showToast({ message: 'Error loading page data', type: 'error' }));
         } finally {
             setLoading(false);
         }
     };
 
     const handleEditClick = (userId: string, fullName: string) => {
-        if (userId === user?.id) {
+        if (userId === loggedInUser?.id) {
             dispatch(showToast({ message: 'You cannot edit your own name', type: 'error' }));
             return;
         }
@@ -99,7 +133,7 @@ export default function UsersPage() {
                 dispatch(showToast({ message: 'Name updated successfully', type: 'success' }));
                 setEditingUserId(null);
                 setEditName('');
-                fetchUsers(); // Refresh the list
+                fetchData();
             } else {
                 dispatch(showToast({ message: result.message || 'Failed to update name', type: 'error' }));
             }
@@ -111,6 +145,108 @@ export default function UsersPage() {
         }
     };
 
+    const handleOpenAccessModal = (user: User) => {
+        setTargetUser(user);
+        setSelectedRoles(user.role || []);
+        setCustomPermissions(user.permissions || []);
+        setIsAccessModalOpen(true);
+        setExpandedModule(null);
+    };
+
+    const handleUpdateAccess = async () => {
+        if (!targetUser) return;
+
+        try {
+            setUpdatingAccess(true);
+            const response = await fetch(`/api/users/${targetUser.id}/updateAccess`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role: selectedRoles,
+                    custom_permissions: customPermissions
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                dispatch(showToast({ message: 'Access updated successfully', type: 'success' }));
+                setIsAccessModalOpen(false);
+                fetchData();
+            } else {
+                dispatch(showToast({ message: result.message || 'Failed to update access', type: 'error' }));
+            }
+        } catch (error) {
+            console.error('Error updating access:', error);
+            dispatch(showToast({ message: 'Error updating access', type: 'error' }));
+        } finally {
+            setUpdatingAccess(false);
+        }
+    };
+
+    const toggleRole = (roleName: string) => {
+        const isSelected = selectedRoles.includes(roleName);
+        const roleObj = roles.find(r => r.name === roleName);
+
+        if (isSelected) {
+            // REMOVING ROLE
+            const newRoles = selectedRoles.filter(r => r !== roleName);
+            setSelectedRoles(newRoles);
+
+            if (roleObj?.permissions) {
+                // Find permissions of OTHER remaining roles
+                const otherRoles = roles.filter(r => newRoles.includes(r.name) && r.name !== roleName);
+                const otherPerms = new Set(otherRoles.flatMap(r => r.permissions || []));
+
+                setCustomPermissions(prev => {
+                    // Filter out permissions that were in the removed role,
+                    // UNLESS they are also granted by another active role
+                    return prev.filter(p => !roleObj.permissions.includes(p) || otherPerms.has(p));
+                });
+                dispatch(showToast({ message: `Reverted permissions for ${roleName}`, type: 'info' }));
+            }
+        } else {
+            // ADDING ROLE
+            setSelectedRoles(prev => [...prev, roleName]);
+            if (roleObj?.permissions) {
+                setCustomPermissions(prev => Array.from(new Set([...prev, ...roleObj.permissions])));
+                dispatch(showToast({ message: `Auto-selected permissions for ${roleName}`, type: 'success' }));
+            }
+        }
+    };
+
+    const addCustomRole = () => {
+        const trimmed = customRoleInput.trim().toLowerCase();
+        if (!trimmed) return;
+
+        if (selectedRoles.includes(trimmed)) {
+            dispatch(showToast({ message: 'Role already added', type: 'info' }));
+        } else {
+            setSelectedRoles(prev => [...prev, trimmed]);
+            // For custom roles not in list, we don't know their default perms,
+            // but we might want to check if it exists in 'roles' array even if added via text
+            const existingRole = roles.find(r => r.name === trimmed);
+            if (existingRole?.permissions) {
+                setCustomPermissions(prev => Array.from(new Set([...prev, ...existingRole.permissions])));
+            }
+            dispatch(showToast({ message: `Added custom role: ${trimmed}`, type: 'success' }));
+        }
+        setCustomRoleInput('');
+    };
+
+    const removeRole = (roleName: string) => {
+        // Reuse toggleRole logic for consistent permission handling
+        if (selectedRoles.includes(roleName)) {
+            toggleRole(roleName);
+        }
+    };
+
+    const togglePermission = (perm: string) => {
+        setCustomPermissions(prev =>
+            prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+        );
+    };
+
     const filteredUsers = users.filter(u =>
         u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -119,10 +255,7 @@ export default function UsersPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-                    <p className="text-gray-500 dark:text-gray-400 font-medium">Loading users...</p>
-                </div>
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
             </div>
         );
     }
@@ -131,8 +264,8 @@ export default function UsersPage() {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">User Management</h1>
-                    <p className="mt-2 text-gray-500 dark:text-gray-400">View and manage all registered users in the system.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">User Directory</h1>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">Manage user access, roles, and identity across the system.</p>
                 </div>
             </div>
 
@@ -148,9 +281,6 @@ export default function UsersPage() {
                             className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-bold text-gray-900 dark:text-white">{filteredUsers.length}</span> users found
-                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -158,7 +288,7 @@ export default function UsersPage() {
                         <thead>
                             <tr className="bg-gray-50/50 dark:bg-gray-900/50">
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
-                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Role</th>
+                                <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Active Roles</th>
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
                                 <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
                             </tr>
@@ -218,7 +348,7 @@ export default function UsersPage() {
                                         <div className="flex flex-wrap gap-1 max-w-xs">
                                             {u.permissions.slice(0, 3).map((p, i) => (
                                                 <span key={i} className="px-2 py-0.5 text-[9px] bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
-                                                    {p.replace('modules~permission~', '')}
+                                                    {p}
                                                 </span>
                                             ))}
                                             {u.permissions.length > 3 && (
@@ -230,31 +360,29 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <div className="flex justify-end gap-2">
-                                            {canManagePermissions ? (
-                                                <Link
-                                                    href={`/permissions?user=${u.id}`}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                                                    title="Manage Permissions"
-                                                >
-                                                    <Shield className="h-4 w-4" />
-                                                </Link>
-                                            ) : (
+                                            {canManagePermissions && (
                                                 <button
-                                                    disabled
-                                                    className="p-2 text-gray-300 dark:text-gray-600 rounded-lg cursor-not-allowed"
-                                                    title="You don't have permission to manage permissions"
+                                                    onClick={() => handleOpenAccessModal(u)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                    title="Manage Access & Roles"
                                                 >
-                                                    <Shield className="h-4 w-4" />
+                                                    <Key className="h-4 w-4" />
                                                 </button>
                                             )}
+                                            <Link
+                                                href={`/permissions?user=${u.id}`}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
+                                                title="View Direct Matrix"
+                                            >
+                                                <Shield className="h-4 w-4" />
+                                            </Link>
                                             <button
                                                 onClick={() => handleEditClick(u.id, u.full_name)}
-                                                disabled={u.id === user?.id || editingUserId !== null}
-                                                className={`p-2 rounded-lg transition-colors ${u.id === user?.id
+                                                disabled={u.id === loggedInUser?.id || editingUserId !== null}
+                                                className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id
                                                     ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                                                     : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
                                                     }`}
-                                                title={u.id === user?.id ? 'You cannot edit your own name' : 'Edit name'}
                                             >
                                                 <Edit2 className="h-4 w-4" />
                                             </button>
@@ -266,6 +394,154 @@ export default function UsersPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Access Modal */}
+            {isAccessModalOpen && targetUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="p-8 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white">
+                                    <Key className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white">Access Control</h2>
+                                    <p className="text-sm text-gray-500">Manage roles and custom overrides for {targetUser.full_name}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsAccessModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer">
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-10">
+                            {/* Roles Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-1">
+                                    <label className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                                        Assigned Roles
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={customRoleInput}
+                                            onChange={(e) => setCustomRoleInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && addCustomRole()}
+                                            placeholder="Add custom role..."
+                                            className="px-3 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                        <button
+                                            onClick={addCustomRole}
+                                            className="p-1 px-3 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                    {selectedRoles.length === 0 && (
+                                        <span className="text-xs text-gray-400 italic">No roles selected</span>
+                                    )}
+                                    {selectedRoles.map(role => (
+                                        <div
+                                            key={role}
+                                            className="group flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded-xl text-xs font-bold border border-blue-200 dark:border-blue-800"
+                                        >
+                                            <span className="capitalize">{role}</span>
+                                            <button
+                                                onClick={() => removeRole(role)}
+                                                className="hover:text-red-500 transition-colors"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {roles.map(role => {
+                                        const isSelected = selectedRoles.includes(role.name);
+                                        return (
+                                            <div
+                                                key={role._id}
+                                                onClick={() => toggleRole(role.name)}
+                                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-center ${isSelected
+                                                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                                                    : 'border-gray-100 dark:border-gray-800 text-gray-500 hover:border-gray-200'
+                                                    }`}
+                                            >
+                                                <span className="text-xs font-bold capitalize">{role.name}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Custom Permissions Section */}
+                            <div className="space-y-4">
+                                <label className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">
+                                    Custom Permission Overrides
+                                </label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {matrix?.modules.map(moduleName => {
+                                        const permsInModule = matrix.permissions.filter(p => p.startsWith(`${moduleName}.`));
+                                        const isExpanded = expandedModule === moduleName;
+
+                                        return (
+                                            <div key={moduleName} className="border border-gray-100 dark:border-gray-800 rounded-3xl">
+                                                <div className="p-4 flex items-center justify-between">
+                                                    <span className="font-bold text-gray-900 dark:text-white capitalize">{moduleName}</span>
+                                                    <button
+                                                        onClick={() => setExpandedModule(isExpanded ? null : moduleName)}
+                                                        className="p-2 flex items-center gap-1 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl"
+                                                    >
+                                                        {permsInModule.filter(p => customPermissions.includes(p)).length} Set
+                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                    </button>
+                                                </div>
+                                                {isExpanded && (
+                                                    <div className="p-4 pt-0 grid grid-cols-1 gap-2 border-t border-gray-50 dark:border-gray-800 mt-2">
+                                                        {permsInModule.map(perm => (
+                                                            <div
+                                                                key={perm}
+                                                                onClick={() => togglePermission(perm)}
+                                                                className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${customPermissions.includes(perm)
+                                                                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500'
+                                                                    }`}
+                                                            >
+                                                                <span className="text-[10px] font-bold">
+                                                                    {perm}
+                                                                </span>
+                                                                {customPermissions.includes(perm) && <CheckCircle2 className="h-3 w-3" />}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex items-center justify-end gap-4">
+                            <button onClick={() => setIsAccessModalOpen(false)} className="px-6 py-3 font-bold text-gray-500 cursor-pointer">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateAccess}
+                                disabled={updatingAccess}
+                                className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/25 cursor-pointer disabled:opacity-50"
+                            >
+                                {updatingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save Access Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

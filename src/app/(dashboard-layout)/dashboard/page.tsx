@@ -15,13 +15,16 @@ export default function DashboardPage() {
     const { user } = useAppSelector((state) => state.auth);
 
     const stats = [
-        { name: 'Profile', href: '/profile', icon: User, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', perm: 'modules~permission~profile' },
-        { name: 'Activity', href: '/activity', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', perm: 'modules~permission~activity' },
-        { name: 'Settings', href: '/settings', icon: Settings, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30', perm: 'modules~permission~settings' },
-        { name: 'Security', href: '/security', icon: Shield, color: 'text-orange-600', bg: 'bg-orange-100 dark:bg-orange-900/30', perm: 'modules~permission~security' },
+        { name: 'Profile', href: '/profile', icon: User, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', perms: ['profile.view', 'profile.tab'] },
+        { name: 'Activity', href: '/activity', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', perms: ['activity.view'] },
+        { name: 'Settings', href: '/settings', icon: Settings, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30', perms: ['settings.view'] },
+        { name: 'Security', href: '/security', icon: Shield, color: 'text-orange-600', bg: 'bg-orange-100 dark:bg-orange-900/30', perms: ['security.view'] },
     ];
 
-    const allowedStats = stats.filter(s => user?.permissions?.includes(s.perm) || user?.role?.includes('super_admin'));
+    const allowedStats = stats.filter(s =>
+        user?.role?.includes('super_admin') ||
+        s.perms.some(p => user?.permissions?.includes(p))
+    );
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -31,7 +34,7 @@ export default function DashboardPage() {
                         Welcome, <span className="text-blue-600 font-black">{user?.full_name?.split(' ')[0]}</span>!
                     </h1>
                     <p className="mt-2 text-lg text-gray-500 dark:text-gray-400 max-w-2xl">
-                        You are logged in as <span className="font-semibold text-gray-700 dark:text-gray-200">{user?.role?.[0]}</span>. Here's what you can access today.
+                        You are logged in as <span className="font-semibold text-gray-700 dark:text-gray-200">{user?.role?.join(', ')}</span>. Here's what you can access today.
                     </p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-2xl border border-blue-100 dark:border-blue-800 text-sm font-bold uppercase tracking-wider">
