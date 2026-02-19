@@ -112,7 +112,7 @@ function ResetPasswordForm() {
                 },
                 body: JSON.stringify({
                     token: tokenFromUrl,
-                    newPassword: password,
+                    password: password,
                     confirmPassword,
                 }),
             });
@@ -121,7 +121,7 @@ function ResetPasswordForm() {
 
             if (response.ok) {
                 dispatch(showToast({ message: data.message || 'Password reset successfully.', type: 'success' }));
-                router.push('/');
+                router.push('/login');
             } else {
                 dispatch(showToast({ message: data.message || 'Failed to reset password.', type: 'error' }));
             }
@@ -144,7 +144,7 @@ function ResetPasswordForm() {
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                     The password reset token is missing or invalid. Please request a new link.
                 </p>
-                <Link href="/forgot-password" size-small className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors cursor-pointer">
+                <Link href="/forgot-password" className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors cursor-pointer text-sm">
                     Request New Link
                 </Link>
             </div>
@@ -152,13 +152,13 @@ function ResetPasswordForm() {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
-            <div className="mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    {emailFromUrl ? 'Resetting password for:' : 'Resetting password with token:'}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30">
+            <div className="mb-8 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">
+                    {emailFromUrl ? 'Account Email' : 'Reset Token'}
                 </p>
-                <code className="text-xs bg-gray-50 dark:bg-gray-900 p-2 rounded block break-all text-blue-600 dark:text-blue-400 font-mono">
-                    {emailFromUrl || `${tokenFromUrl.substring(0, 30)}...${tokenFromUrl.substring(tokenFromUrl.length - 10)}`}
+                <code className="text-[11px] block break-all text-gray-600 dark:text-gray-300 font-mono leading-relaxed">
+                    {emailFromUrl || `${tokenFromUrl.substring(0, 40)}...${tokenFromUrl.substring(tokenFromUrl.length - 20)}`}
                 </code>
             </div>
 
@@ -191,7 +191,7 @@ function ResetPasswordForm() {
                                 if (!password) setPasswordError('Password is required');
                             }}
                             placeholder="••••••••"
-                            className={`w-full px-4 py-3 rounded-xl border ${passwordError ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'} bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none`}
+                            className={`w-full px-4 py-4 rounded-2xl border ${passwordError ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none backdrop-blur-sm`}
                         />
                         <button
                             type="button"
@@ -223,8 +223,8 @@ function ResetPasswordForm() {
                                 if (!confirmPassword) setConfirmPasswordError('Confirm password is required');
                             }}
                             placeholder="••••••••"
-                            className={`w-full px-4 py-3 rounded-xl border ${confirmPasswordError || (confirmPassword && !passwordsMatch) ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
-                                } bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none`}
+                            className={`w-full px-4 py-4 rounded-2xl border ${confirmPasswordError || (confirmPassword && !passwordsMatch) ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'
+                                } bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none backdrop-blur-sm`}
                         />
                         <button
                             type="button"
@@ -251,25 +251,31 @@ function ResetPasswordForm() {
                 <button
                     type="submit"
                     disabled={isLoading || !isPasswordStrong || !passwordsMatch}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transform transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="group relative w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/25 transform transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer overflow-hidden"
                 >
-                    {isLoading ? (
-                        <span className="flex items-center justify-center">
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Updating Password...
-                        </span>
-                    ) : (
-                        'Reset Password'
-                    )}
+                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <div className="relative flex items-center justify-center">
+                        {isLoading ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Updating Password...
+                            </>
+                        ) : (
+                            'Reset Password'
+                        )}
+                    </div>
                 </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 text-sm">
-                <Link href="/" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
-                    Back to Home
+            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700/50 text-sm">
+                <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-bold transition-all flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Login
                 </Link>
             </div>
         </div>
@@ -278,15 +284,17 @@ function ResetPasswordForm() {
 
 function RequirementItem({ label, met }: { label: string; met: boolean }) {
     return (
-        <li className="flex items-center gap-2 text-sm">
-            {met ? (
-                <Check className="w-4 h-4 text-green-500" />
-            ) : (
-                <div className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                </div>
-            )}
-            <span className={met ? 'text-green-700 dark:text-green-400 transition-colors' : 'text-gray-500 dark:text-gray-400 transition-colors'}>
+        <li className="flex items-center gap-3 py-1">
+            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${met ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-400'
+                }`}>
+                {met ? (
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                )}
+            </div>
+            <span className={`text-sm transition-colors duration-300 ${met ? 'text-green-700 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-gray-400'
+                }`}>
                 {label}
             </span>
         </li>
@@ -295,22 +303,42 @@ function RequirementItem({ label, met }: { label: string; met: boolean }) {
 
 export default function ResetPasswordPage() {
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-24 bg-gray-50 dark:bg-gray-900">
-            <div className="text-center max-w-md w-full">
-                <h1 className="text-4xl font-extrabold mb-8 text-gray-900 dark:text-white tracking-tight">
-                    Reset Password
-                </h1>
+        <main className="relative flex min-h-screen flex-col items-center justify-center p-6 overflow-hidden bg-white dark:bg-[#0f172a]">
+            {/* Background Decorations */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 blur-[100px] animate-pulse"></div>
+                <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-indigo-400/10 blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+            </div>
+
+            <div className="z-10 w-full max-w-md">
+                <div className="text-center mb-10">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/30 mb-6 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+                        <RefreshCw className="w-8 h-8 text-white" />
+                    </div>
+                    <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">
+                        Reset Password
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400">
+                        Secure your account with a new strong password
+                    </p>
+                </div>
+
                 <Suspense fallback={
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30 text-center">
                         <div className="animate-pulse flex flex-col items-center">
-                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-                            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full mb-6"></div>
-                            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                            <div className="w-full h-8 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6"></div>
+                            <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded-xl mb-4"></div>
+                            <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded-xl mb-6"></div>
+                            <div className="w-full h-14 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
                         </div>
                     </div>
                 }>
                     <ResetPasswordForm />
                 </Suspense>
+
+                <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Need help? <Link href="/contact" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Contact Support</Link>
+                </div>
             </div>
         </main>
     );
