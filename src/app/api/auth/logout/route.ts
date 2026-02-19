@@ -6,7 +6,7 @@ export async function POST() {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get('accessToken')?.value;
 
-    const API_BASE_URL = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3011';
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3011';
 
     // Try to notify backend, but don't let it block local logout
     try {

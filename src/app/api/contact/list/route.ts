@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get('accessToken')?.value;
 
-    const backendUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3011";
 
     const queryParams = new URLSearchParams();
     queryParams.append("page", page);
