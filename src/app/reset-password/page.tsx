@@ -112,7 +112,8 @@ function ResetPasswordForm() {
                 },
                 body: JSON.stringify({
                     token: tokenFromUrl,
-                    password
+                    newPassword: password,
+                    confirmPassword,
                 }),
             });
 
