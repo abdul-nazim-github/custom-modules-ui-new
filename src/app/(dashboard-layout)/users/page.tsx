@@ -317,12 +317,12 @@ export default function UsersPage() {
                                     <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
                                     <th
                                         className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors group text-right"
-                                        onClick={() => handleSort('updated_at')}
+                                        onClick={() => handleSort('created_at')}
                                     >
                                         <div className="flex items-center justify-end gap-2">
-                                            Date
+                                            Joined On
                                             <span className="text-gray-300 group-hover:text-blue-400 transition-colors">
-                                                {sortBy === 'updated_at' ? (
+                                                {sortBy === 'created_at' ? (
                                                     sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                                                 ) : (
                                                     <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100" />
@@ -372,7 +372,7 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                {new Date(u.updated_at || u.created_at).toLocaleDateString('en-GB')}
+                                                {new Date(u.created_at).toLocaleDateString('en-GB')}
                                             </p>
                                         </td>
                                         <td className="px-8 py-6 text-right">
