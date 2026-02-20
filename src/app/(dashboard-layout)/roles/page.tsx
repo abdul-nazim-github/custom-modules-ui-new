@@ -104,7 +104,7 @@ export default function RolesPage() {
         try {
             setLoading(true);
             const [rolesRes, matrixRes] = await Promise.all([
-                fetch(`/ api / roles / list ? page = ${currentPage}& limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''} `),
+                fetch(`/api/roles/list?page=${currentPage}&limit=${limit}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
                 fetch('/api/permissions/matrix')
             ]);
 
@@ -177,7 +177,7 @@ export default function RolesPage() {
         try {
             setSaving(true);
             const url = editingRole
-                ? `/ api / roles / update / ${editingRole._id} `
+                ? `/api/roles/update/${editingRole._id}`
                 : '/api/roles/create';
 
             const method = editingRole ? 'PUT' : 'POST';
@@ -216,7 +216,7 @@ export default function RolesPage() {
 
         try {
             setIsDeleting(true);
-            const response = await fetch(`/ api / roles / delete/${itemToDelete.id}`, {
+            const response = await fetch(`/api/roles/delete/${itemToDelete.id}`, {
                 method: 'DELETE',
             });
 
