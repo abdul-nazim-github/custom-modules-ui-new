@@ -12,7 +12,7 @@ export default function ProfilePage() {
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
     const router = useRouter();
-    const [isEditing, setIsEditing] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '',
@@ -24,10 +24,9 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (user) {
-            const names = user.full_name.split(' ');
             setFormData({
-                first_name: names[0] || '',
-                last_name: names.slice(1).join(' ') || ''
+                first_name: user.first_name || '',
+                last_name: user.last_name || ''
             });
         }
     }, [user]);
@@ -56,14 +55,23 @@ export default function ProfilePage() {
 
             if (response.ok) {
                 const updatedFullName = `${formData.first_name} ${formData.last_name}`.trim();
-                dispatch(updateUser({ full_name: updatedFullName }));
+                dispatch(updateUser({
+                    full_name: updatedFullName,
+                    first_name: formData.first_name,
+                    last_name: formData.last_name
+                }));
                 dispatch(showToast({ message: 'Profile updated successfully', type: 'success' }));
-                setIsEditing(false);
+                setIsModalOpen(false);
                 // Also update localStorage so it persists on reload
                 const savedUser = localStorage.getItem('user');
                 if (savedUser) {
                     const userObj = JSON.parse(savedUser);
-                    localStorage.setItem('user', JSON.stringify({ ...userObj, full_name: updatedFullName }));
+                    localStorage.setItem('user', JSON.stringify({
+                        ...userObj,
+                        full_name: updatedFullName,
+                        first_name: formData.first_name,
+                        last_name: formData.last_name
+                    }));
                 }
             } else {
                 dispatch(showToast({ message: result.message || result.error || 'Failed to update profile', type: 'error' }));
@@ -89,34 +97,14 @@ export default function ProfilePage() {
                     content={!canEdit ? "You do not have permission to edit profile" : ""}
                 >
                     <div className={!canEdit ? "cursor-not-allowed" : ""}>
-                        {isEditing ? (
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-all cursor-pointer"
-                                >
-                                    <X className="h-4 w-4" />
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={loading || !canEdit}
-                                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                                >
-                                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    Save Changes
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                disabled={!canEdit}
-                                className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${!canEdit ? 'grayscale-[0.5]' : ''}`}
-                            >
-                                <Edit2 className="h-4 w-4" />
-                                Edit Profile
-                            </button>
-                        )}
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            disabled={!canEdit}
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${!canEdit ? 'grayscale-[0.5]' : ''}`}
+                        >
+                            <Edit2 className="h-4 w-4" />
+                            Edit Profile
+                        </button>
                     </div>
                 </Tooltip>
             </div>
@@ -135,7 +123,7 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                             <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white text-center">
-                                {isEditing ? `${formData.first_name} ${formData.last_name}` : user.full_name}
+                                {user.full_name}
                             </h2>
                             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider mt-1">{user.role.join(', ')}</p>
                         </div>
@@ -170,35 +158,15 @@ export default function ProfilePage() {
                         <div className="p-8 grid gap-8 md:grid-cols-2">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">First Name</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={formData.first_name}
-                                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        placeholder="Enter first name"
-                                    />
-                                ) : (
-                                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
-                                        {user.full_name.split(' ')[0]}
-                                    </div>
-                                )}
+                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
+                                    {user.first_name || user.full_name.split(' ')[0]}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Last Name</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={formData.last_name}
-                                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                        placeholder="Enter last name"
-                                    />
-                                ) : (
-                                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
-                                        {user.full_name.split(' ').slice(1).join(' ')}
-                                    </div>
-                                )}
+                                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-medium">
+                                    {user.last_name || user.full_name.split(' ').slice(1).join(' ')}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Email</label>
@@ -236,6 +204,71 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Profile Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                    <Edit2 className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-white">Edit Profile</h2>
+                                    <p className="text-xs text-gray-500">Update your personal information</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors cursor-pointer"
+                            >
+                                <X className="h-5 w-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">First Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                    className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium"
+                                    placeholder="Enter your first name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Last Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                    className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium"
+                                    placeholder="Enter your last name"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-8 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex gap-3">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 px-6 py-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-2xl text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={loading}
+                                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
