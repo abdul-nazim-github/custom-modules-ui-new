@@ -153,8 +153,34 @@ export default function RolesPage() {
         setSelectedPermissions([]);
     };
 
+    const isPermissionActive = (perm: string) => {
+        if (selectedPermissions.includes('*')) return true;
+        const moduleName = perm.split('.')[0];
+        if (selectedPermissions.includes(`${moduleName}.*`)) return true;
+        return selectedPermissions.includes(perm);
+    };
+
     const togglePermission = (perm: string) => {
         if (viewOnly) return;
+
+        // If super admin wildcard exists, toggle it off and expand all others EXCEPT this one
+        if (selectedPermissions.includes('*')) {
+            const allPerms = matrix?.permissions.filter(p => p !== perm) || [];
+            setSelectedPermissions(allPerms);
+            return;
+        }
+
+        const moduleName = perm.split('.')[0];
+        const moduleWildcard = `${moduleName}.*`;
+
+        // If module wildcard exists, toggle it off and expand other perms in module
+        if (selectedPermissions.includes(moduleWildcard)) {
+            const permsInModule = matrix?.permissions.filter(p => p.startsWith(`${moduleName}.`) && p !== perm) || [];
+            const otherPerms = selectedPermissions.filter(p => p !== moduleWildcard);
+            setSelectedPermissions([...otherPerms, ...permsInModule]);
+            return;
+        }
+
         setSelectedPermissions(prev =>
             prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
         );
@@ -162,11 +188,25 @@ export default function RolesPage() {
 
     const toggleModuleAll = (moduleName: string, permsInModule: string[]) => {
         if (viewOnly) return;
-        const allSelected = permsInModule.every(p => selectedPermissions.includes(p));
-        if (allSelected) {
-            setSelectedPermissions(prev => prev.filter(p => !permsInModule.includes(p)));
+
+        const moduleWildcard = `${moduleName}.*`;
+        const hasFullWildcard = selectedPermissions.includes('*');
+        const hasModuleWildcard = selectedPermissions.includes(moduleWildcard);
+        const allExplicitSelected = permsInModule.every(p => selectedPermissions.includes(p));
+
+        if (hasFullWildcard) {
+            // Remove full wildcard, add all other modules' perms
+            const otherPerms = matrix?.permissions.filter(p => !p.startsWith(`${moduleName}.`)) || [];
+            setSelectedPermissions(otherPerms);
+            return;
+        }
+
+        if (hasModuleWildcard || allExplicitSelected) {
+            // Remove wildcard or all explicit perms
+            setSelectedPermissions(prev => prev.filter(p => !permsInModule.includes(p) && p !== moduleWildcard));
         } else {
-            setSelectedPermissions(prev => [...new Set([...prev, ...permsInModule])]);
+            // Add module wildcard instead of listing all
+            setSelectedPermissions(prev => [...new Set([...prev.filter(p => !permsInModule.includes(p)), moduleWildcard])]);
         }
     };
 
@@ -341,9 +381,40 @@ export default function RolesPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-bold">
-                                                {role.permissions?.length || 0} Permissions
-                                            </span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {role.permissions?.includes('*') ? (
+                                                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-800 flex items-center gap-1.5">
+                                                        <Shield className="h-3 w-3" />
+                                                        Full System Access
+                                                    </span>
+                                                ) : (() => {
+                                                    const wildcards = role.permissions?.filter(p => p.endsWith('.*')) || [];
+                                                    const regularCount = (role.permissions?.length || 0) - wildcards.length;
+
+                                                    if (wildcards.length === 0) {
+                                                        return (
+                                                            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-bold">
+                                                                {role.permissions?.length || 0} Permissions
+                                                            </span>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {wildcards.map(w => (
+                                                                <span key={w} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded text-[10px] font-bold border border-purple-100 dark:border-purple-800">
+                                                                    All {w.split('.')[0]}
+                                                                </span>
+                                                            ))}
+                                                            {regularCount > 0 && (
+                                                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-[10px] font-bold">
+                                                                    +{regularCount} More
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex justify-end gap-2">
@@ -471,7 +542,10 @@ export default function RolesPage() {
                                     {matrix?.modules.map((moduleName) => {
                                         const permsInModule = matrix.permissions.filter(p => p.startsWith(`${moduleName}.`));
                                         const isExpanded = expandedModule === moduleName;
-                                        const allSelected = permsInModule.every(p => selectedPermissions.includes(p));
+                                        const moduleWildcard = `${moduleName}.*`;
+                                        const allSelected = selectedPermissions.includes('*') ||
+                                            selectedPermissions.includes(moduleWildcard) ||
+                                            permsInModule.every(p => selectedPermissions.includes(p));
                                         const someSelected = permsInModule.some(p => selectedPermissions.includes(p));
 
                                         return (
@@ -512,7 +586,7 @@ export default function RolesPage() {
                                                             <div
                                                                 key={perm}
                                                                 onClick={() => togglePermission(perm)}
-                                                                className={`p-3 rounded-xl flex items-center justify-between transition-all ${selectedPermissions.includes(perm)
+                                                                className={`p-3 rounded-xl flex items-center justify-between transition-all ${isPermissionActive(perm)
                                                                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                                                                     : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500'
                                                                     } ${viewOnly ? 'cursor-default' : 'cursor-pointer'}`}
@@ -520,7 +594,7 @@ export default function RolesPage() {
                                                                 <span className="text-xs font-bold capitalize">
                                                                     {perm.split('.').slice(1).join(' ').replace(/\./g, ' ')}
                                                                 </span>
-                                                                {selectedPermissions.includes(perm) && <CheckCircle2 className="h-3 w-3" />}
+                                                                {isPermissionActive(perm) && <CheckCircle2 className="h-3 w-3" />}
                                                             </div>
                                                         ))}
                                                     </div>
