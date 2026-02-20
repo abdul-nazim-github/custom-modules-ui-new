@@ -152,7 +152,9 @@ export default function ProfilePage() {
                                 <Calendar className="h-5 w-5 text-emerald-600" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-gray-400 uppercase">Member Since</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">February 2026</p>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                        {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                                    </p>
                                 </div>
                             </div>
                         </div>

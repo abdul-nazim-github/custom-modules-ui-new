@@ -6,6 +6,7 @@ interface User {
   full_name: string;
   role: string[];
   permissions: string[];
+  created_at?: string;
 }
 
 interface AuthState {
