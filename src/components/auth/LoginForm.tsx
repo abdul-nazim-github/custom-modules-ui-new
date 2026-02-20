@@ -163,12 +163,15 @@ export default function LoginForm() {
                     </Link>
                 </p>
                 <div className="mt-4">
-                    <Link
-                        href="/contact"
-                        className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm font-medium transition-colors duration-200 cursor-pointer"
-                    >
-                        Need help? Contact Support
-                    </Link>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                        Need help?{' '}
+                        <Link
+                            href="/contact"
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors duration-200 cursor-pointer"
+                        >
+                            Contact Support
+                        </Link>
+                    </span>
                 </div>
             </div>
         </form>

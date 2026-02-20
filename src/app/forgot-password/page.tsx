@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
                         <button
                             type="submit"
                             disabled={isLoading || !!emailError || !email}
-                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transform transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-[0.98] cursor-pointer"
                         >
                             {isLoading ? (
                                 <span className="flex items-center justify-center">
@@ -120,12 +120,15 @@ export default function ForgotPasswordPage() {
                         <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
                             Back to Login
                         </Link>
-                        <Link
-                            href="/contact"
-                            className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 font-medium transition-colors"
-                        >
-                            Need help? Contact Support
-                        </Link>
+                        <div className="text-gray-500 dark:text-gray-400 font-medium">
+                            Need help?{' '}
+                            <Link
+                                href="/contact"
+                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors"
+                            >
+                                Contact Support
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>
