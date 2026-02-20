@@ -231,7 +231,7 @@ export default function ContentPage() {
                                                 </td>
                                                 <td className="px-8 py-6">
                                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {new Date(item.created_at).toLocaleDateString()}
+                                                        {new Date(item.created_at).toLocaleDateString('en-GB')}
                                                     </p>
                                                 </td>
                                                 <td className="px-8 py-6 text-right">

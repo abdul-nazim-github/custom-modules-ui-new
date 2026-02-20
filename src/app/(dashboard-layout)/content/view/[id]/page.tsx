@@ -117,7 +117,7 @@ export default function ViewContentPage() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400">Created At</p>
-                                        <p className="text-sm font-bold">{new Date(content.created_at).toLocaleDateString()}</p>
+                                        <p className="text-sm font-bold">{new Date(content.created_at).toLocaleDateString('en-GB')}</p>
                                     </div>
                                 </div>
                                 {content.updated_at && (
@@ -127,7 +127,7 @@ export default function ViewContentPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs text-gray-400">Last Updated</p>
-                                            <p className="text-sm font-bold">{new Date(content.updated_at).toLocaleDateString()}</p>
+                                            <p className="text-sm font-bold">{new Date(content.updated_at).toLocaleDateString('en-GB')}</p>
                                         </div>
                                     </div>
                                 )}

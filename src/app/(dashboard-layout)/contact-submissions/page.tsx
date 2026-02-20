@@ -89,11 +89,7 @@ export default function ContactFormPage() {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        return new Date(dateString).toLocaleDateString('en-GB');
     };
 
     if (!user && loading) {

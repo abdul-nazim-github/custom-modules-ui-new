@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
-import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon } from 'lucide-react';
+import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
@@ -15,10 +15,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 interface User {
     id: string;
     email: string;
+    first_name: string;
+    last_name: string;
     full_name: string;
     role: string[];
     permissions: string[];
     created_at: string;
+    updated_at: string;
 }
 
 interface Role {
@@ -46,6 +49,8 @@ export default function UsersPage() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
     const [loading, setLoading] = useState(true);
+    const [sortBy, setSortBy] = useState('created_at');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // Edit Name State
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -94,13 +99,13 @@ export default function UsersPage() {
 
     useEffect(() => {
         fetchData();
-    }, [currentPage, limit, searchQuery]);
+    }, [currentPage, limit, searchQuery, sortBy, sortOrder]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [usersRes, rolesRes, matrixRes] = await Promise.all([
-                fetch(`/api/auth/users?page=${currentPage}&limit=${limit}&sortBy=name&order=asc${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
+                fetch(`/api/auth/users?page=${currentPage}&limit=${limit}&sortBy=${sortBy}&order=${sortOrder}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`),
                 fetch('/api/roles/list'),
                 fetch('/api/permissions/matrix')
             ]);
@@ -124,6 +129,16 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+        setCurrentPage(1);
     };
 
     const handleEditClick = (userId: string, fullName: string) => {
@@ -181,6 +196,10 @@ export default function UsersPage() {
     };
 
     const handleOpenAccessModal = (user: User) => {
+        if (user.id === loggedInUser?.id) {
+            dispatch(showToast({ message: 'You cannot manage your own access and roles', type: 'error' }));
+            return;
+        }
         setTargetUser(user);
         setSelectedRoles(user.role || []);
         setCustomPermissions(user.permissions || []);
@@ -320,7 +339,7 @@ export default function UsersPage() {
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="p-8">
-                            <TableSkeleton rows={limit} columns={4} />
+                            <TableSkeleton rows={limit} columns={5} />
                         </div>
                     ) : users.length === 0 ? (
                         <EmptyState
@@ -334,9 +353,38 @@ export default function UsersPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                                    <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">User</th>
+                                    <th
+                                        className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors group"
+                                        onClick={() => handleSort('first_name')}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            User
+                                            <span className="text-gray-300 group-hover:text-blue-400 transition-colors">
+                                                {sortBy === 'first_name' ? (
+                                                    sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : (
+                                                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+                                                )}
+                                            </span>
+                                        </div>
+                                    </th>
                                     <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Active Roles</th>
                                     <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest">Permissions</th>
+                                    <th
+                                        className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors group text-right"
+                                        onClick={() => handleSort('updated_at')}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Date
+                                            <span className="text-gray-300 group-hover:text-blue-400 transition-colors">
+                                                {sortBy === 'updated_at' ? (
+                                                    sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : (
+                                                    <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+                                                )}
+                                            </span>
+                                        </div>
+                                    </th>
                                     <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -406,12 +454,17 @@ export default function UsersPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {new Date(u.updated_at || u.created_at).toLocaleDateString('en-GB')}
+                                            </p>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Tooltip content={!canManageAccess ? "You do not have permission to manage access" : "Manage Access & Roles"}>
-                                                    <div className={!canManageAccess ? "cursor-not-allowed" : ""}>
+                                                <Tooltip content={u.id === loggedInUser?.id ? "You cannot manage your own access" : !canManageAccess ? "You do not have permission to manage access" : "Manage Access & Roles"}>
+                                                    <div className={(!canManageAccess || u.id === loggedInUser?.id) ? "cursor-not-allowed" : ""}>
                                                         <button
                                                             onClick={() => handleOpenAccessModal(u)}
-                                                            disabled={!canManageAccess}
+                                                            disabled={!canManageAccess || u.id === loggedInUser?.id}
                                                             className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
                                                         >
                                                             <Key className="h-4 w-4" />

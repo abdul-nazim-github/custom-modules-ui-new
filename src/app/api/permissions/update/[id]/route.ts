@@ -20,6 +20,21 @@ export async function PUT(
       );
     }
 
+    // Prevent users from updating their own permissions
+    try {
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      const loggedInUserId = payload.id || payload._id || payload.sub;
+
+      if (loggedInUserId === id) {
+        return NextResponse.json(
+          { success: false, message: 'You cannot update your own permissions' },
+          { status: 403 }
+        );
+      }
+    } catch (e) {
+      console.warn('Could not decode token for permission update check');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/permissions/update/${id}`, {
       method: 'PUT',
       headers: {
