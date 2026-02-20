@@ -382,12 +382,19 @@ export default function RolesPage() {
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-1">
-                                                {role.permissions?.includes('*') ? (
-                                                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-800 flex items-center gap-1.5">
-                                                        <Shield className="h-3 w-3" />
-                                                        Full System Access
-                                                    </span>
-                                                ) : (() => {
+                                                {(() => {
+                                                    const isFull = role.permissions?.includes('*') ||
+                                                        (matrix && role.permissions?.length === matrix.permissions.length);
+
+                                                    if (isFull) {
+                                                        return (
+                                                            <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-800 flex items-center gap-1.5">
+                                                                <Shield className="h-3 w-3" />
+                                                                Full System Access
+                                                            </span>
+                                                        );
+                                                    }
+
                                                     const wildcards = role.permissions?.filter(p => p.endsWith('.*')) || [];
                                                     const regularCount = (role.permissions?.length || 0) - wildcards.length;
 

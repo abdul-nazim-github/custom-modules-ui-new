@@ -405,7 +405,10 @@ export default function UsersPage() {
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-1 max-w-xs">
                                                 {(() => {
-                                                    if (u.permissions.includes('*')) {
+                                                    const isFull = u.permissions.includes('*') ||
+                                                        (matrix && u.permissions.length === matrix.permissions.length);
+
+                                                    if (isFull) {
                                                         return (
                                                             <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800 flex items-center gap-1 uppercase tracking-tight">
                                                                 <Shield className="h-2.5 w-2.5" />
