@@ -320,7 +320,7 @@ export default function UsersPage() {
                                         onClick={() => handleSort('created_at')}
                                     >
                                         <div className="flex items-center justify-end gap-2">
-                                            Joined On
+                                            DOJ
                                             <span className="text-gray-300 group-hover:text-blue-400 transition-colors">
                                                 {sortBy === 'created_at' ? (
                                                     sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
