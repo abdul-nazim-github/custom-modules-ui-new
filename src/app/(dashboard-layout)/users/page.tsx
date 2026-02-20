@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
-import { Users, Search, Edit2, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, Search, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
@@ -52,10 +52,7 @@ export default function UsersPage() {
     const [sortBy, setSortBy] = useState('created_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    // Edit Name State
-    const [editingUserId, setEditingUserId] = useState<string | null>(null);
-    const [editName, setEditName] = useState('');
-    const [saving, setSaving] = useState(false);
+
 
     // Access Modal State
     const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -141,59 +138,7 @@ export default function UsersPage() {
         setCurrentPage(1);
     };
 
-    const handleEditClick = (userId: string, fullName: string) => {
-        if (userId === loggedInUser?.id) {
-            dispatch(showToast({ message: 'You cannot edit your own name', type: 'error' }));
-            return;
-        }
-        setEditingUserId(userId);
-        setEditName(fullName);
-    };
 
-    const handleCancelEdit = () => {
-        setEditingUserId(null);
-        setEditName('');
-    };
-
-    const handleSaveName = async (userId: string) => {
-        if (!canEdit) {
-            dispatch(showToast({ message: 'You do not have permission to edit users', type: 'error' }));
-            return;
-        }
-        if (!editName.trim()) {
-            dispatch(showToast({ message: 'Name cannot be empty', type: 'error' }));
-            return;
-        }
-
-        try {
-            setSaving(true);
-            const nameParts = editName.trim().split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-
-            const response = await fetch('/api/auth/profile/edit', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ first_name: firstName, last_name: lastName }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                dispatch(showToast({ message: 'Name updated successfully', type: 'success' }));
-                setEditingUserId(null);
-                setEditName('');
-                fetchData();
-            } else {
-                dispatch(showToast({ message: result.message || 'Failed to update name', type: 'error' }));
-            }
-        } catch (error) {
-            console.error('Error updating name:', error);
-            dispatch(showToast({ message: 'Error updating name', type: 'error' }));
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const handleOpenAccessModal = (user: User) => {
         if (user.id === loggedInUser?.id) {
@@ -397,36 +342,8 @@ export default function UsersPage() {
                                                     {u.full_name.charAt(0)}
                                                 </div>
                                                 <div className="flex-1">
-                                                    {editingUserId === u.id ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <input
-                                                                type="text"
-                                                                value={editName}
-                                                                onChange={(e) => setEditName(e.target.value)}
-                                                                className="px-3 py-1.5 text-sm font-bold bg-white dark:bg-gray-900 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                                autoFocus
-                                                            />
-                                                            <button
-                                                                onClick={() => handleSaveName(u.id)}
-                                                                disabled={saving}
-                                                                className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
-                                                            >
-                                                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                                            </button>
-                                                            <button
-                                                                onClick={handleCancelEdit}
-                                                                disabled={saving}
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
-                                                            >
-                                                                <X className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <p className="text-sm font-bold text-gray-900 dark:text-white">{u.full_name}</p>
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
-                                                        </>
-                                                    )}
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{u.full_name}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -481,20 +398,7 @@ export default function UsersPage() {
                                                         </Link>
                                                     </div>
                                                 </Tooltip>
-                                                <Tooltip content={!canEdit ? "You do not have permission to edit users" : "Edit Name"}>
-                                                    <div className={(!canEdit || u.id === loggedInUser?.id) ? "cursor-not-allowed" : ""}>
-                                                        <button
-                                                            onClick={() => handleEditClick(u.id, u.full_name)}
-                                                            disabled={u.id === loggedInUser?.id || editingUserId !== null || !canEdit}
-                                                            className={`p-2 rounded-lg transition-colors ${u.id === loggedInUser?.id || !canEdit
-                                                                ? 'text-gray-300 dark:text-gray-600 pointer-events-none'
-                                                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer'
-                                                                }`}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </Tooltip>
+
                                             </div>
                                         </td>
                                     </tr>
