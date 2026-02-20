@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
-import { Users, Search, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, Search, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
@@ -128,6 +128,13 @@ export default function UsersPage() {
         }
     };
 
+    const isPermissionActive = (perm: string) => {
+        if (customPermissions.includes('*')) return true;
+        const moduleName = perm.split('.')[0];
+        if (customPermissions.includes(`${moduleName}.*`)) return true;
+        return customPermissions.includes(perm);
+    };
+
     const handleSort = (field: string) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -245,9 +252,48 @@ export default function UsersPage() {
     };
 
     const togglePermission = (perm: string) => {
+        // Handle Super Admin Wildcard
+        if (customPermissions.includes('*')) {
+            const allPerms = matrix?.permissions.filter(p => p !== perm) || [];
+            setCustomPermissions(allPerms);
+            return;
+        }
+
+        const moduleName = perm.split('.')[0];
+        const moduleWildcard = `${moduleName}.*`;
+
+        // Handle Module Wildcard
+        if (customPermissions.includes(moduleWildcard)) {
+            const permsInModule = matrix?.permissions.filter(p => p.startsWith(`${moduleName}.`) && p !== perm) || [];
+            const otherPerms = customPermissions.filter(p => p !== moduleWildcard);
+            setCustomPermissions([...otherPerms, ...permsInModule]);
+            return;
+        }
+
         setCustomPermissions(prev =>
             prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
         );
+    };
+
+    const toggleModuleAll = (moduleName: string, permsInModule: string[]) => {
+        const moduleWildcard = `${moduleName}.*`;
+        const hasFullWildcard = customPermissions.includes('*');
+        const hasModuleWildcard = customPermissions.includes(moduleWildcard);
+        const allExplicitSelected = permsInModule.every(p => customPermissions.includes(p));
+
+        if (hasFullWildcard) {
+            // Remove full wildcard, add all other modules' perms
+            const otherPerms = matrix?.permissions.filter(p => !p.startsWith(`${moduleName}.`)) || [];
+            setCustomPermissions(otherPerms);
+            return;
+        }
+
+        if (hasModuleWildcard || allExplicitSelected) {
+            setCustomPermissions(prev => prev.filter(p => !permsInModule.includes(p) && p !== moduleWildcard));
+        } else {
+            // Add module wildcard
+            setCustomPermissions(prev => [...new Set([...prev.filter(p => !permsInModule.includes(p)), moduleWildcard])]);
+        }
     };
 
     if (!loggedInUser && loading) {
@@ -358,16 +404,54 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-1 max-w-xs">
-                                                {u.permissions.slice(0, 3).map((p, i) => (
-                                                    <span key={i} className="px-2 py-0.5 text-[9px] bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 font-mono font-bold border border-gray-200 dark:border-gray-600">
-                                                        {p}
-                                                    </span>
-                                                ))}
-                                                {u.permissions.length > 3 && (
-                                                    <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 font-bold">
-                                                        +{u.permissions.length - 3}
-                                                    </span>
-                                                )}
+                                                {(() => {
+                                                    if (u.permissions.includes('*')) {
+                                                        return (
+                                                            <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800 flex items-center gap-1 uppercase tracking-tight">
+                                                                <Shield className="h-2.5 w-2.5" />
+                                                                Full System Access
+                                                            </span>
+                                                        );
+                                                    }
+
+                                                    // Process wildcards and individual permissions
+                                                    const displayPerms: string[] = [];
+                                                    const processedModules = new Set<string>();
+
+                                                    u.permissions.forEach(p => {
+                                                        if (p.endsWith('.*')) {
+                                                            const moduleName = p.split('.')[0];
+                                                            displayPerms.push(`All ${moduleName} Access`);
+                                                            processedModules.add(moduleName);
+                                                        }
+                                                    });
+
+                                                    u.permissions.forEach(p => {
+                                                        if (!p.endsWith('.*') && !p.includes('*')) {
+                                                            const moduleName = p.split('.')[0];
+                                                            if (!processedModules.has(moduleName)) {
+                                                                displayPerms.push(p);
+                                                            }
+                                                        }
+                                                    });
+
+                                                    return (
+                                                        <>
+                                                            {displayPerms.slice(0, 3).map((p, i) => (
+                                                                <span key={i} className={`px-2 py-0.5 text-[9px] rounded font-bold border ${p.startsWith('All ')
+                                                                    ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-800'
+                                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 font-mono'}`}>
+                                                                    {p}
+                                                                </span>
+                                                            ))}
+                                                            {displayPerms.length > 3 && (
+                                                                <span className="px-2 py-0.5 text-[9px] bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800">
+                                                                    +{displayPerms.length - 3}
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
@@ -497,7 +581,14 @@ export default function UsersPage() {
                                                     : 'border-gray-100 dark:border-gray-800 text-gray-500 hover:border-gray-200'
                                                     }`}
                                             >
-                                                <span className="text-xs font-bold capitalize">{role.name}</span>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className="text-xs font-bold capitalize">{role.name}</span>
+                                                    <Tooltip content={role.permissions?.length > 0 ? role.permissions.join(', ') : 'No permissions'}>
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 transition-colors" />
+                                                        </div>
+                                                    </Tooltip>
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -513,36 +604,54 @@ export default function UsersPage() {
                                     {matrix?.modules.map(moduleName => {
                                         const permsInModule = matrix.permissions.filter(p => p.startsWith(`${moduleName}.`));
                                         const isExpanded = expandedModule === moduleName;
+                                        const moduleWildcard = `${moduleName}.*`;
+                                        const allSelected = customPermissions.includes('*') ||
+                                            customPermissions.includes(moduleWildcard) ||
+                                            permsInModule.every(p => customPermissions.includes(p));
 
                                         return (
                                             <div key={moduleName} className="border border-gray-100 dark:border-gray-800 rounded-3xl">
                                                 <div className="p-4 flex items-center justify-between">
-                                                    <span className="font-bold text-gray-900 dark:text-white capitalize">{moduleName}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <button
+                                                            onClick={() => toggleModuleAll(moduleName, permsInModule)}
+                                                            className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${allSelected
+                                                                ? 'bg-blue-600 border-blue-600 text-white'
+                                                                : 'border-gray-300 dark:border-gray-600'
+                                                                }`}
+                                                        >
+                                                            {allSelected && <Check className="h-3 w-3" />}
+                                                        </button>
+                                                        <span className="font-bold text-gray-900 dark:text-white capitalize">{moduleName}</span>
+                                                    </div>
                                                     <button
                                                         onClick={() => setExpandedModule(isExpanded ? null : moduleName)}
-                                                        className="p-2 flex items-center gap-1 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl"
+                                                        className="p-2 flex items-center gap-1 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl cursor-pointer"
                                                     >
-                                                        {permsInModule.filter(p => customPermissions.includes(p)).length} Set
+                                                        {permsInModule.filter(p => isPermissionActive(p)).length} Set
                                                         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                                     </button>
                                                 </div>
                                                 {isExpanded && (
                                                     <div className="p-4 pt-0 grid grid-cols-1 gap-2 border-t border-gray-50 dark:border-gray-800 mt-2">
-                                                        {permsInModule.map(perm => (
-                                                            <div
-                                                                key={perm}
-                                                                onClick={() => togglePermission(perm)}
-                                                                className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${customPermissions.includes(perm)
-                                                                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500'
-                                                                    }`}
-                                                            >
-                                                                <span className="text-[10px] font-bold">
-                                                                    {perm}
-                                                                </span>
-                                                                {customPermissions.includes(perm) && <CheckCircle2 className="h-3 w-3" />}
-                                                            </div>
-                                                        ))}
+                                                        {permsInModule.map(perm => {
+                                                            const isActive = isPermissionActive(perm);
+                                                            return (
+                                                                <div
+                                                                    key={perm}
+                                                                    onClick={() => togglePermission(perm)}
+                                                                    className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${isActive
+                                                                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                                                                        : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500'
+                                                                        }`}
+                                                                >
+                                                                    <span className="text-xs font-bold capitalize">
+                                                                        {perm.split('.').slice(1).join(' ').replace(/\./g, ' ')}
+                                                                    </span>
+                                                                    {isActive && <CheckCircle2 className="h-3 w-3" />}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
