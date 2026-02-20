@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import debounce from 'lodash.debounce';
-import { Users, Search, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, Search, Shield, Save, X, Loader2, Key, CheckCircle2, ChevronDown, ChevronUp, Lock, MoreVertical, Trash2, Check, UserIcon, ArrowUpDown, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import Link from 'next/link';
@@ -497,7 +497,14 @@ export default function UsersPage() {
                                                     : 'border-gray-100 dark:border-gray-800 text-gray-500 hover:border-gray-200'
                                                     }`}
                                             >
-                                                <span className="text-xs font-bold capitalize">{role.name}</span>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className="text-xs font-bold capitalize">{role.name}</span>
+                                                    <Tooltip content={role.permissions?.length > 0 ? role.permissions.join(', ') : 'No permissions'}>
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 transition-colors" />
+                                                        </div>
+                                                    </Tooltip>
+                                                </div>
                                             </div>
                                         );
                                     })}
