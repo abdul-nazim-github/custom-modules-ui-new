@@ -5,6 +5,7 @@ import { useRef } from 'react'
 import { Provider } from 'react-redux'
 import { makeStore, AppStore } from '../lib/store'
 import SessionProvider from '@/components/auth/SessionProvider'
+import ApiInterceptor from '@/components/auth/ApiInterceptor'
 
 export default function StoreProvider({
     children,
@@ -19,7 +20,9 @@ export default function StoreProvider({
 
     return (
         <Provider store={storeRef.current}>
-            <SessionProvider>{children}</SessionProvider>
+            <ApiInterceptor>
+                <SessionProvider>{children}</SessionProvider>
+            </ApiInterceptor>
         </Provider>
     )
 }
