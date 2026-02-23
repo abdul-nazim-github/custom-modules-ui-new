@@ -53,8 +53,9 @@ export default function SecurityPage() {
 
     const passwordValidation = validatePassword(formData.newPassword);
     const passwordsMatch = formData.newPassword === formData.confirmPassword;
+    const isSameAsOld = formData.newPassword && formData.oldPassword === formData.newPassword;
     const canSubmit = formData.oldPassword && formData.newPassword && formData.confirmPassword &&
-        passwordValidation.isValid && passwordsMatch;
+        passwordValidation.isValid && passwordsMatch && !isSameAsOld;
 
     const generatePassword = () => {
         const length = 16;
@@ -212,6 +213,12 @@ export default function SecurityPage() {
                                 </button>
                             </div>
                         </div>
+                        {isSameAsOld && (
+                            <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                New password must be different from current password
+                            </p>
+                        )}
                     </div>
 
                     {/* Confirm Password */}
