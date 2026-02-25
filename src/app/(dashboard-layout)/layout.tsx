@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { setCredentials, logout } from '@/lib/features/auth/authSlice';
@@ -24,43 +24,55 @@ export default function DashboardLayout({
     const dispatch = useAppDispatch();
     const { isAuthenticated } = useAppSelector((state) => state.auth);
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+    // Guard to prevent re-running session check after a redirect is triggered
+    const isRedirecting = useRef(false);
 
     useEffect(() => {
+        // Only run once on mount — do NOT include isAuthenticated in deps
+        // to avoid infinite loop when logout() changes isAuthenticated
         const verifySession = async () => {
+            if (isRedirecting.current) return;
+
             try {
                 const res = await fetch('/api/auth/session');
 
                 if (res.ok) {
-                    if (!isAuthenticated) {
-                        const savedUser = localStorage.getItem('user');
-                        if (savedUser) {
-                            dispatch(setCredentials({ user: JSON.parse(savedUser) }));
-                        } else {
-                            window.location.href = '/login';
-                        }
+                    const savedUser = localStorage.getItem('user');
+                    if (savedUser) {
+                        dispatch(setCredentials({ user: JSON.parse(savedUser) }));
+                    } else if (!isAuthenticated) {
+                        isRedirecting.current = true;
+                        window.location.href = '/login';
+                        return;
                     }
                     setIsCheckingAuth(false);
                 } else {
+                    isRedirecting.current = true;
                     localStorage.removeItem('user');
                     dispatch(logout());
                     window.location.href = '/login';
                 }
             } catch (err) {
                 console.error('Session verification failed:', err);
+                isRedirecting.current = true;
                 window.location.href = '/login';
             }
         };
 
         verifySession();
-    }, [isAuthenticated, dispatch, router]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run only once on mount
 
     // Background polling for session validity
     useEffect(() => {
         if (isCheckingAuth || !isAuthenticated) return;
 
         const interval = setInterval(async () => {
+            if (isRedirecting.current) return;
+
             const res = await fetch('/api/auth/session');
             if (!res.ok) {
+                isRedirecting.current = true;
                 localStorage.removeItem('user');
                 dispatch(logout());
                 window.location.href = '/login';
@@ -68,7 +80,7 @@ export default function DashboardLayout({
         }, 10000); // Check every 10 seconds
 
         return () => clearInterval(interval);
-    }, [isCheckingAuth, isAuthenticated, dispatch, router]);
+    }, [isCheckingAuth, isAuthenticated, dispatch]);
 
     if (isCheckingAuth) {
         return (
